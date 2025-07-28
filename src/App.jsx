@@ -2625,7 +2625,7 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
 
 
     return (
-        <div className="bg-gray-900 text-slate-300 font-sans flex min-h-screen overflow-hidden" dir="rtl">
+        <div className="bg-gray-900 text-slate-300 font-sans flex min-h-screen overflow-hidden w-screen" dir="rtl">
             <Notification message={notification.message} type={notification.type} onDismiss={() => setNotification({ message: '', type: '' })} />
             <Modal isOpen={modalInfo.isOpen} onClose={() => setModalInfo({ isOpen: false, title: '', data: null })} title={modalInfo.title} size="max-w-3xl">
                 <DetailView data={modalInfo.data} />
@@ -2709,7 +2709,7 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
             </aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0 bg-gray-900">
+            <div className="flex-1 flex flex-col min-w-0">
                 <header className="h-20 flex-shrink-0 bg-slate-900/60 backdrop-blur-lg border-b border-slate-800 flex items-center justify-between px-6">
                     <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="text-slate-400 hover:text-white">
                         <Menu size={24} />
@@ -2727,7 +2727,7 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
                         </button>
                     </div>
                 </header>
-                <main className="flex-1 overflow-y-auto custom-scrollbar">
+                <main className="flex-1 overflow-y-auto custom-scrollbar bg-gray-900">
                     {renderPage()}
                 </main>
             </div>
@@ -2746,7 +2746,7 @@ const LoginPage = ({ onLogin, error }) => {
     };
 
     return (
-        <div className="min-h-screen w-full bg-gray-900 text-slate-300 flex items-center justify-center p-4" dir="rtl">
+        <div className="min-h-screen w-screen bg-gray-900 text-slate-300 flex items-center justify-center p-4" dir="rtl">
              <div className="absolute inset-0 bg-gradient-to-br from-gray-900 via-slate-900 to-blue-900/50 z-0"></div>
              <div className="absolute inset-0 z-10 opacity-10" style={{backgroundImage: 'url(https://www.transparenttextures.com/patterns/cubes.png)'}}></div>
 
@@ -3072,7 +3072,7 @@ export default function App() {
 
     if (authLoading || isSeeding || (currentUser && !data)) {
         return (
-            <div className="min-h-screen w-full bg-gray-900 text-slate-300 flex items-center justify-center">
+            <div className="min-h-screen w-screen bg-gray-900 text-slate-300 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
                     <Bitcoin size={40} className="text-blue-500 animate-spin" />
                     <p className="text-lg">{isSeeding ? "در حال راه‌اندازی اولیه..." : "در حال بارگذاری اطلاعات..."}</p>
