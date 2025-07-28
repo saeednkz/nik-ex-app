@@ -2615,6 +2615,7 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
             'dashboard': <LayoutDashboard size={20} />,
             'new-transaction': <ArrowRightLeft size={20} />,
             'exchange': <Repeat size={20} />,
+            'sheets-import': <Sheet size={20} />,
             'accounting': <BookKey size={20} />,
             'financial-report': <FileText size={20} />,
             'pool-overview': <Droplets size={20} />,
