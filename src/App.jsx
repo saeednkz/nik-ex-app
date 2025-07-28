@@ -1181,7 +1181,7 @@ const FinancialReport = ({ transactions, items }) => {
                 currencyResult.totalIncome = currencyResult.tradingProfit + currencyResult.commissionReceived + currencyResult.netFeeProfit;
             } else {
                 currencyResult.avgBuyPrice = currencyResult.totalBuyVolume > 0 ? currencyResult.totalBuyPriceAmount / currencyResult.totalBuyVolume : 0;
-                currencyResult.avgSellPrice = currencyResult.totalSellVolume > 0 ? currencyResult.totalSellPriceAmount / currencyResult.totalSellVolume : 0;
+                currencyResult.avgSellPrice = currencyResult.totalSellVolume > 0 ? currencyResult.totalSellPriceAmount / unitResult.totalSellVolume : 0;
             }
             
             grandTotals.buyOrders += currencyResult.buyOrders;
@@ -2888,9 +2888,9 @@ export default function App() {
             ];
 
             const initialRoles = {
-                'admin': { name: 'ادمین کل', permissions: { dashboard: 'edit', 'new-transaction': 'edit', exchange: 'edit', accounting: 'edit', 'financial-report': 'edit', 'pool-overview': 'edit', management: 'edit', settings: 'edit', 'access-management': 'edit' }},
-                'manager': { name: 'مدیر', permissions: { dashboard: 'view', 'new-transaction': 'edit', exchange: 'edit', accounting: 'view', 'financial-report': 'view', 'pool-overview': 'view', management: 'view', settings: 'none', 'access-management': 'none' }},
-                'finance': { name: 'کارمند مالی', permissions: { dashboard: 'view', 'new-transaction': 'edit', exchange: 'none', accounting: 'view', 'financial-report': 'view', 'pool-overview': 'view', management: 'none', settings: 'none', 'access-management': 'none' }}
+                'admin': { name: 'ادمین کل', permissions: { dashboard: 'edit', 'new-transaction': 'edit', exchange: 'edit', 'sheets-import': 'edit', accounting: 'edit', 'financial-report': 'edit', 'pool-overview': 'edit', management: 'edit', settings: 'edit', 'access-management': 'edit' }},
+                'manager': { name: 'مدیر', permissions: { dashboard: 'view', 'new-transaction': 'edit', exchange: 'edit', 'sheets-import': 'edit', accounting: 'view', 'financial-report': 'view', 'pool-overview': 'view', management: 'view', settings: 'none', 'access-management': 'none' }},
+                'finance': { name: 'کارمند مالی', permissions: { dashboard: 'view', 'new-transaction': 'edit', exchange: 'none', 'sheets-import': 'edit', accounting: 'view', 'financial-report': 'view', 'pool-overview': 'view', management: 'none', settings: 'none', 'access-management': 'none' }}
             };
 
             try {
