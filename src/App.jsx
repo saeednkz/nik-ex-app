@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
-import { ChevronLeft, LayoutDashboard, Bitcoin, DollarSign, Wallet, Building, Settings, PlusCircle, FileDown, Edit, Trash2, TrendingUp, Calendar, PieChart as PieChartIcon, X, Droplets, BookCopy, Search, BarChart3, Gift, Type, Package, ListPlus, HelpCircle, Menu, BookKey, FileSignature, Library, Users, RefreshCw, Archive, Activity, ShoppingCart, Repeat, FileText, Briefcase, Users2, ChevronsLeft, ChevronsRight, ShieldOff, ArrowRightLeft, LogOut, Eye, EyeOff } from 'lucide-react';
+import { ChevronLeft, LayoutDashboard, Bitcoin, DollarSign, Wallet, Building, Settings, PlusCircle, FileDown, Edit, Trash2, TrendingUp, Calendar, PieChart as PieChartIcon, X, Droplets, BookCopy, Search, BarChart3, Gift, Type, Package, ListPlus, HelpCircle, Menu, BookKey, FileSignature, Library, Users, RefreshCw, Archive, Activity, ShoppingCart, Repeat, FileText, Briefcase, Users2, ChevronsLeft, ChevronsRight, ShieldOff, ArrowRightLeft, LogOut, Eye, EyeOff, Sheet } from 'lucide-react';
+import { gapi } from 'gapi-script';
 
 // Firebase Imports
 import { initializeApp } from "firebase/app";
@@ -31,9 +32,6 @@ import {
 // ====================================================================================
 // =========================== FIREBASE CONFIGURATION =================================
 // ====================================================================================
-// 
-//  کد پیکربندی Firebase شما با موفقیت جای‌گذاری شد.
-//
 const firebaseConfig = {
   apiKey: "AIzaSyBtvPsfnNLCXEGDToRArSwIr-qfa63GuLY",
   authDomain: "nik-ex-app.firebaseapp.com",
@@ -43,6 +41,14 @@ const firebaseConfig = {
   appId: "1:420331427979:web:c03c2ceaa8eae992a61c8e"
 };
 // ====================================================================================
+// =========================== GOOGLE SHEETS CONFIGURATION ============================
+// ====================================================================================
+const GOOGLE_API_KEY = "AIzaSyDe2ZgPy488Ha2wMFnvHM9upHXxZXHL43E";
+const GOOGLE_CLIENT_ID = "522998435883-l0e2572a14go0vm4l2clhu8hc99o9n74.apps.googleusercontent.com";
+const SPREADSHEET_ID = "16tcx7eRuVLgK3sEnIzTB-FLsnoMrIInDnEGCnJbMmso";
+const SHEET_RANGE = "Sheet1!A:G"; // Assuming data is in the first 7 columns
+// ====================================================================================
+
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -90,6 +96,7 @@ const ALL_PAGES = [
     { id: 'dashboard', label: 'داشبورد' },
     { id: 'new-transaction', label: 'صرافی' },
     { id: 'exchange', label: 'اکسچنج' },
+    { id: 'sheets-import', label: 'ورود از شیت'},
     { id: 'accounting', label: 'حسابداری' },
     { id: 'financial-report', label: 'گزارش مالی' },
     { id: 'pool-overview', label: 'نمای کلی استخرها' },
