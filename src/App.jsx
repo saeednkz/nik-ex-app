@@ -2709,7 +2709,7 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
             </aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0">
+            <div className="flex-1 flex flex-col min-w-0 bg-gray-900">
                 <header className="h-20 flex-shrink-0 bg-slate-900/60 backdrop-blur-lg border-b border-slate-800 flex items-center justify-between px-6">
                     <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="text-slate-400 hover:text-white">
                         <Menu size={24} />
@@ -2727,7 +2727,7 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
                         </button>
                     </div>
                 </header>
-                <main className="flex-1 overflow-y-auto custom-scrollbar bg-gray-900">
+                <main className="flex-1 overflow-y-auto custom-scrollbar">
                     {renderPage()}
                 </main>
             </div>
@@ -2836,7 +2836,10 @@ export default function App() {
             const style = document.createElement('style');
             style.id = customStylesId;
             style.innerHTML = `
-                body { font-family: 'Inter', sans-serif; }
+                body { 
+                    font-family: 'Inter', sans-serif; 
+                    background-color: #111827; /* Tailwind's gray-900 */
+                }
                 .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.5); border-radius: 10px; }
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(71, 85, 105, 0.7); border-radius: 10px; }
