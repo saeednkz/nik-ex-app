@@ -2625,7 +2625,7 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
 
 
     return (
-        <div className="bg-gray-900 text-slate-300 font-sans flex min-h-screen" dir="rtl">
+        <div className="bg-gray-900 text-slate-300 font-sans flex min-h-screen overflow-hidden" dir="rtl">
             <Notification message={notification.message} type={notification.type} onDismiss={() => setNotification({ message: '', type: '' })} />
             <Modal isOpen={modalInfo.isOpen} onClose={() => setModalInfo({ isOpen: false, title: '', data: null })} title={modalInfo.title} size="max-w-3xl">
                 <DetailView data={modalInfo.data} />
@@ -2709,7 +2709,7 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
             </aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="flex-1 flex flex-col min-w-0">
                 <header className="h-20 flex-shrink-0 bg-slate-900/60 backdrop-blur-lg border-b border-slate-800 flex items-center justify-between px-6">
                     <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="text-slate-400 hover:text-white">
                         <Menu size={24} />
