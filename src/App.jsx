@@ -2812,6 +2812,50 @@ export default function App() {
     const [loginError, setLoginError] = useState('');
     const [isSeeding, setIsSeeding] = useState(false);
 
+    // --- Dynamic Style and Font Loader ---
+    useEffect(() => {
+        const tailwindScriptId = 'tailwind-script';
+        if (!document.getElementById(tailwindScriptId)) {
+            const script = document.createElement('script');
+            script.id = tailwindScriptId;
+            script.src = "https://cdn.tailwindcss.com";
+            document.head.appendChild(script);
+        }
+
+        const fontLinkId = 'inter-font-link';
+        if (!document.getElementById(fontLinkId)) {
+            const fontLink = document.createElement('link');
+            fontLink.id = fontLinkId;
+            fontLink.href = "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap";
+            fontLink.rel = "stylesheet";
+            document.head.appendChild(fontLink);
+        }
+
+        const customStylesId = 'custom-styles';
+        if (!document.getElementById(customStylesId)) {
+            const style = document.createElement('style');
+            style.id = customStylesId;
+            style.innerHTML = `
+                body { font-family: 'Inter', sans-serif; }
+                .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
+                .custom-scrollbar::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.5); border-radius: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(71, 85, 105, 0.7); border-radius: 10px; }
+                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.7); }
+                @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+                .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+                @keyframes scale-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+                .animate-scale-in { animation: scale-in 0.3s ease-out forwards; }
+                @keyframes slide-down { from { transform: translateY(-100%) translateX(-50%); } to { transform: translateY(0) translateX(-50%); } }
+                .animate-slide-down { animation: slide-down 0.5s ease-out forwards; }
+                @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
+                .animate-shake { animation: shake 0.3s ease-in-out; }
+                @keyframes fade-in-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+                .animate-fade-in-up { animation: fade-in-up 0.5s ease-out forwards; }
+            `;
+            document.head.appendChild(style);
+        }
+    }, []);
+
     // --- One-time Database Seeding ---
     useEffect(() => {
         const seedDatabase = async () => {
