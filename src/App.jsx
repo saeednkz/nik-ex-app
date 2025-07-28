@@ -2709,7 +2709,7 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
             </aside>
 
             {/* Main Content */}
-            <div className="flex-1 flex flex-col min-w-0"> {/* Added min-w-0 to prevent overflow */}
+            <div className="flex-1 flex flex-col overflow-hidden">
                 <header className="h-20 flex-shrink-0 bg-slate-900/60 backdrop-blur-lg border-b border-slate-800 flex items-center justify-between px-6">
                     <button onClick={() => setSidebarOpen(!isSidebarOpen)} className="text-slate-400 hover:text-white">
                         <Menu size={24} />
