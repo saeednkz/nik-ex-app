@@ -2251,10 +2251,24 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
     const [modalInfo, setModalInfo] = useState({ isOpen: false, title: '', data: null });
     const [expandedCategories, setExpandedCategories] = useState({});
 
-    const userRole = data.roles[currentUser.role];
+    const userRole = data.roles && data.roles[currentUser.role];
     if (!userRole) {
-        // Handle case where role might not be loaded yet
-        return null;
+        // This can happen if roles haven't loaded yet, or the user has an invalid role.
+        // The main App component's loading state should prevent this for the initial load.
+        // If it still happens, it's likely an invalid role.
+        return (
+            <div className="min-h-screen w-screen bg-gray-900 text-slate-300 flex items-center justify-center p-4">
+                <div className="text-center bg-slate-800/60 p-8 rounded-2xl shadow-lg border border-slate-700/80">
+                    <h2 className="text-xl font-bold text-red-400 mb-4">خطای دسترسی</h2>
+                    <p className="text-slate-300">نقش کاربری تعریف شده برای شما (`{currentUser.role}`) در سیستم یافت نشد.</p>
+                    <p className="text-slate-400 mt-2">لطفا با مدیر سیستم تماس بگیرید.</p>
+                    <StyledButton onClick={handleLogout} variant="danger" className="mt-6">
+                        <LogOut size={16} />
+                        خروج
+                    </StyledButton>
+                </div>
+            </div>
+        );
     }
 
     const toggleCategory = (category) => {
@@ -2908,7 +2922,7 @@ export default function App() {
     };
 
 
-    if (authLoading || (currentUser && !data)) {
+    if (authLoading || (currentUser && (!data || !data.roles || !data.users || !data.items))) {
         return (
             <div className="min-h-screen w-screen bg-gray-900 text-slate-300 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
