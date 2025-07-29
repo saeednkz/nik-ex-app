@@ -219,7 +219,7 @@ const WalletModal = ({ isOpen, onClose, onSave, eCurrencies, initialData }) => {
         if (!name.trim()) {
             setError('لطفا نام کیف پول را وارد کنید.'); return;
         }
-        onSave({ id: initialData?.id, name, type, forCurrency }); onClose();
+        onSave('wallet', { id: initialData?.id, name, type, forCurrency }); onClose();
     };
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? "ویرایش کیف پول" : "افزودن کیف پول جدید"}>
@@ -270,7 +270,7 @@ const ItemModal = ({ isOpen, onClose, onSave, initialData }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!formState.name.trim()) return;
-        onSave({ ...initialData, ...formState });
+        onSave('item', { ...initialData, ...formState });
         onClose();
     };
 
