@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { ChevronLeft, LayoutDashboard, Bitcoin, DollarSign, Wallet, Building, Settings, PlusCircle, FileDown, Edit, Trash2, TrendingUp, Calendar, PieChart as PieChartIcon, X, Droplets, BookCopy, Search, BarChart3, Gift, Type, Package, ListPlus, HelpCircle, Menu, BookKey, FileSignature, Library, Users, RefreshCw, Archive, Activity, ShoppingCart, Repeat, FileText, Briefcase, Users2, ChevronsLeft, ChevronsRight, ShieldOff, ArrowRightLeft, LogOut, Eye, EyeOff, Sheet } from 'lucide-react';
 
 // Firebase Imports
-import { initializeApp } from "firebase/app";
+import { initializeApp, deleteApp } from "firebase/app"; // Import deleteApp
 import {
     getAuth,
     onAuthStateChanged,
@@ -32,7 +32,6 @@ import {
 // ====================================================================================
 // =========================== FIREBASE CONFIGURATION =================================
 // ====================================================================================
-// IMPORTANT: Replace with your actual Firebase configuration
 const firebaseConfig = {
     apiKey: "AIzaSyBtvPsfnNLCXEGDToRArSwIr-qfa63GuLY",
     authDomain: "nik-ex-app.firebaseapp.com",
@@ -2757,6 +2756,7 @@ export default function App() {
     };
 
     const handleSaveUser = async (userData) => {
+        // This function now correctly handles user creation without logging the admin out.
         if (userData.uid) { // Editing existing user
             const userDocRef = doc(db, "users", userData.uid);
             await updateDoc(userDocRef, { name: userData.name, role: userData.role });
@@ -2764,15 +2764,24 @@ export default function App() {
             // It's better handled in a dedicated "change password" screen.
             showNotification('کاربر با موفقیت ویرایش شد.', 'success');
         } else { // Creating new user
-            let userCredential;
+            // 1. Create a temporary, secondary Firebase app instance.
+            const tempAppName = `temp-app-${Date.now()}`;
+            const tempApp = initializeApp(firebaseConfig, tempAppName);
+            const tempAuth = getAuth(tempApp);
+
             try {
-                userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+                // 2. Use the temporary auth instance to create the user.
+                // This will not affect the main app's authentication state.
+                const userCredential = await createUserWithEmailAndPassword(tempAuth, userData.email, userData.password);
                 const user = userCredential.user;
+
+                // 3. Save the user's details to Firestore using the main db instance.
                 await setDoc(doc(db, "users", user.uid), {
                     name: userData.name,
                     email: userData.email,
                     role: userData.role
                 });
+
                 showNotification('کاربر جدید با موفقیت ایجاد شد.', 'success');
             } catch (error) {
                 console.error("Error creating user:", error);
@@ -2780,6 +2789,9 @@ export default function App() {
                     throw new Error('این ایمیل قبلا ثبت شده است.');
                 }
                 throw new Error('خطا در ایجاد کاربر.');
+            } finally {
+                // 4. Clean up and delete the temporary app instance.
+                await deleteApp(tempApp);
             }
         }
     };
@@ -2967,7 +2979,7 @@ export default function App() {
                 onSaveRole={handleSaveRole}
                 onSaveUser={handleSaveUser}
                 onDeleteUser={handleDeleteUser}
-                onUserRoleChange={handleUserRoleChange}
+                onUserRoleChange={onUserRoleChange}
                 onTransactionSubmit={handleTransactionSubmit}
                 onExchangeSubmit={handleExchangeSubmit}
             />
