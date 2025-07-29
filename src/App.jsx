@@ -44,7 +44,7 @@ const firebaseConfig = {
 // =========================== GOOGLE API CONFIGURATION ===============================
 // ====================================================================================
 const GOOGLE_API_KEY = "db3264d67ed0433156b1d7c47bd3127c0c3df163"; 
-const GOOGLE_CLIENT_ID = "522998435883-l0e2572a14go0vm4l2clhu8hc99o9n74.apps.googleusercontent.com"; 
+const GOOGLE_CLIENT_ID = "522998435883-rlfhmn9ira3rpas8nffr97rv15cgp3hv.apps.googleusercontent.com"; 
 const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
 const SCOPES = "https://www.googleapis.com/auth/spreadsheets.readonly";
 // ====================================================================================
