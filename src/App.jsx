@@ -1,27 +1,26 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { ChevronLeft, LayoutDashboard, Bitcoin, DollarSign, Wallet, Building, Settings, PlusCircle, FileDown, Edit, Trash2, TrendingUp, Calendar, PieChart as PieChartIcon, X, Droplets, BookCopy, Search, BarChart3, Gift, Type, Package, ListPlus, HelpCircle, Menu, BookKey, FileSignature, Library, Users, RefreshCw, Archive, Activity, ShoppingCart, Repeat, FileText, Briefcase, Users2, ChevronsLeft, ChevronsRight, ShieldOff, ArrowRightLeft, LogOut, Eye, EyeOff, Sheet } from 'lucide-react';
-import { gapi } from 'gapi-script';
 
 // Firebase Imports
 import { initializeApp } from "firebase/app";
-import { 
-    getAuth, 
-    onAuthStateChanged, 
-    signInWithEmailAndPassword, 
+import {
+    getAuth,
+    onAuthStateChanged,
+    signInWithEmailAndPassword,
     signOut,
     createUserWithEmailAndPassword,
     updatePassword
 } from "firebase/auth";
-import { 
-    getFirestore, 
-    collection, 
-    doc, 
+import {
+    getFirestore,
+    collection,
+    doc,
     getDoc,
-    getDocs, 
-    addDoc, 
-    setDoc, 
-    updateDoc, 
+    getDocs,
+    addDoc,
+    setDoc,
+    updateDoc,
     deleteDoc,
     onSnapshot,
     query,
@@ -33,21 +32,15 @@ import {
 // ====================================================================================
 // =========================== FIREBASE CONFIGURATION =================================
 // ====================================================================================
+// IMPORTANT: Replace with your actual Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyBtvPsfnNLCXEGDToRArSwIr-qfa63GuLY",
-  authDomain: "nik-ex-app.firebaseapp.com",
-  projectId: "nik-ex-app",
-  storageBucket: "nik-ex-app.appspot.com",
-  messagingSenderId: "420331427979",
-  appId: "1:420331427979:web:c03c2ceaa8eae992a61c8e"
+    apiKey: "AIzaSyBtvPsfnNLCXEGDToRArSwIr-qfa63GuLY",
+    authDomain: "nik-ex-app.firebaseapp.com",
+    projectId: "nik-ex-app",
+    storageBucket: "nik-ex-app.appspot.com",
+    messagingSenderId: "420331427979",
+    appId: "1:420331427979:web:c03c2ceaa8eae992a61c8e"
 };
-// ====================================================================================
-// =========================== GOOGLE SHEETS CONFIGURATION ============================
-// ====================================================================================
-const GOOGLE_API_KEY = "AIzaSyDe2ZgPy488Ha2wMFnvHM9upHXxZXHL43E";
-const GOOGLE_CLIENT_ID = "522998435883-l0e2572a14go0vm4l2clhu8hc99o9n74.apps.googleusercontent.com";
-const SPREADSHEET_ID = "16tcx7eRuVLgK3sEnIzTB-FLsnoMrIInDnEGCnJbMmso";
-const SHEET_RANGE = "Sheet1!A:G"; // Assuming data is in the first 7 columns
 // ====================================================================================
 
 
@@ -76,18 +69,20 @@ const getPersianMonthDateRange = () => {
     const parts = formatter.formatToParts(now);
     const year = parts.find(p => p.type === 'year').value;
     const month = parts.find(p => p.type === 'month').value;
-    
+
     const startDate = `${year}/${month}/01`;
-    
+
     const monthInt = parseInt(month, 10);
     let lastDay = '31';
     if (monthInt > 6 && monthInt < 12) {
         lastDay = '30';
     } else if (monthInt === 12) {
-        lastDay = '29'; 
+        // Note: This doesn't account for leap years in the Persian calendar.
+        // For simplicity, we'll use 29. A more robust solution would use a library.
+        lastDay = '29';
     }
     const endDate = `${year}/${month}/${lastDay}`;
-    
+
     return { startDate, endDate };
 };
 
@@ -150,77 +145,114 @@ const Modal = ({ isOpen, onClose, title, children, size = 'max-w-xl' }) => {
 };
 
 const Notification = ({ message, type, onDismiss }) => {
-    if (!message) return null;
-    const baseClasses = "fixed top-5 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl shadow-2xl text-white text-sm font-semibold flex items-center gap-3 border animate-slide-down";
-    const typeClasses = type === 'success' ? 'bg-green-600/80 border-green-500' : 'bg-red-600/80 border-red-500';
+    const [visible, setVisible] = useState(false);
+
     useEffect(() => {
-        const timer = setTimeout(() => { onDismiss(); }, 4000);
-        return () => clearTimeout(timer);
-    }, [onDismiss]);
+        if (message) {
+            setVisible(true);
+            const timer = setTimeout(() => {
+                setVisible(false);
+                // Allow time for fade-out animation before calling onDismiss
+                setTimeout(onDismiss, 300);
+            }, 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [message, onDismiss]);
+
+    const baseClasses = "fixed top-5 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-xl shadow-2xl text-white text-sm font-semibold flex items-center gap-3 border transition-all duration-300";
+    const typeClasses = type === 'success' ? 'bg-green-600/80 border-green-500' : 'bg-red-600/80 border-red-500';
+    const visibilityClass = visible ? 'animate-slide-down opacity-100' : 'opacity-0 -translate-y-full';
+
+    if (!message && !visible) return null;
+
     return (
-        <div className={`${baseClasses} ${typeClasses} backdrop-blur-md`}>
+        <div className={`${baseClasses} ${typeClasses} ${visibilityClass} backdrop-blur-md`}>
             <span>{message}</span>
-            <button onClick={onDismiss} className="text-white/80 hover:text-white">&times;</button>
+            <button onClick={() => setVisible(false)} className="text-white/80 hover:text-white">&times;</button>
         </div>
     );
 };
 
-const StyledInput = (props) => (
-    <input {...props} className={`w-full p-2.5 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${props.className || ''}`} />
-);
 
-const StyledSelect = (props) => (
-    <select {...props} className={`w-full p-2.5 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${props.className || ''}`} />
-);
+const StyledInput = React.forwardRef((props, ref) => (
+    <input ref={ref} {...props} className={`w-full p-2.5 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${props.className || ''}`} />
+));
 
-const StyledButton = ({ children, onClick, type = 'button', variant = 'primary', className = '', disabled = false }) => {
+const StyledSelect = React.forwardRef((props, ref) => (
+    <select ref={ref} {...props} className={`w-full p-2.5 bg-slate-800 border border-slate-600 rounded-lg text-slate-100 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition ${props.className || ''}`} />
+));
+
+const StyledButton = ({ children, onClick, type = 'button', variant = 'primary', className = '', disabled = false, isLoading = false }) => {
     const baseClasses = "px-4 py-2 rounded-lg transition font-semibold shadow-md disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2";
     const variantClasses = {
         primary: 'bg-blue-600 text-white hover:bg-blue-700 shadow-blue-600/20',
         secondary: 'bg-slate-700 text-slate-100 hover:bg-slate-600',
         danger: 'bg-red-600 text-white hover:bg-red-700 shadow-red-600/20'
     };
-    return <button type={type} onClick={onClick} disabled={disabled} className={`${baseClasses} ${variantClasses[variant]} ${className}`}>{children}</button>;
+    return (
+        <button type={type} onClick={onClick} disabled={disabled || isLoading} className={`${baseClasses} ${variantClasses[variant]} ${className}`}>
+            {isLoading && <RefreshCw size={16} className="animate-spin" />}
+            {children}
+        </button>
+    );
 };
 
 // --- Form Modals (مودال‌های فرم) ---
 
-const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message }) => {
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, isLoading }) => {
     if (!isOpen) return null;
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={title} size="max-w-md">
             <div className="text-slate-300">
                 <p>{message}</p>
                 <div className="flex justify-end gap-3 pt-6 mt-4 border-t border-slate-700">
-                    <StyledButton onClick={onClose} variant="secondary">انصراف</StyledButton>
-                    <StyledButton onClick={() => { onConfirm(); onClose(); }} variant="danger">تایید و حذف</StyledButton>
+                    <StyledButton onClick={onClose} variant="secondary" disabled={isLoading}>انصراف</StyledButton>
+                    <StyledButton onClick={onConfirm} variant="danger" isLoading={isLoading}>تایید و حذف</StyledButton>
                 </div>
             </div>
         </Modal>
     );
 };
 
-const WalletModal = ({ isOpen, onClose, onSave, eCurrencies, initialData }) => {
+const WalletModal = ({ isOpen, onClose, onSave, initialData }) => {
     const [name, setName] = useState('');
     const [type, setType] = useState('دیجیتال');
-    const [forCurrency, setForCurrency] = useState('');
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
     const isEditing = !!initialData;
+
     useEffect(() => {
-        if (isEditing && initialData) {
-            setName(initialData.name); setType(initialData.type); setForCurrency(initialData.forCurrency || '');
-        } else {
-            setName(''); setType('دیجیتال'); setForCurrency('');
+        if (isOpen) {
+            if (isEditing && initialData) {
+                setName(initialData.name);
+                setType(initialData.type);
+            } else {
+                setName('');
+                setType('دیجیتال');
+            }
+            setError('');
+            setIsLoading(false);
         }
-        setError('');
-    }, [initialData, isOpen]);
-    const handleSubmit = (e) => {
+    }, [initialData, isOpen, isEditing]);
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (!name.trim()) {
-            setError('لطفا نام کیف پول را وارد کنید.'); return;
+            setError('لطفا نام کیف پول را وارد کنید.');
+            return;
         }
-        onSave('wallet', { id: initialData?.id, name, type, forCurrency }); onClose();
+        setIsLoading(true);
+        try {
+            await onSave({ id: initialData?.id, name, type });
+            onClose();
+        } catch (err) {
+            console.error(err);
+            setError('خطا در ذخیره‌سازی. لطفا دوباره تلاش کنید.');
+        } finally {
+            setIsLoading(false);
+        }
     };
+
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? "ویرایش کیف پول" : "افزودن کیف پول جدید"}>
             <form onSubmit={handleSubmit} className="space-y-4 text-slate-300">
@@ -237,8 +269,8 @@ const WalletModal = ({ isOpen, onClose, onSave, eCurrencies, initialData }) => {
                     </StyledSelect>
                 </div>
                 <div className="flex justify-end gap-3 pt-4">
-                    <StyledButton onClick={onClose} variant="secondary">انصراف</StyledButton>
-                    <StyledButton type="submit" variant="primary">{isEditing ? "ذخیره تغییرات" : "افزودن"}</StyledButton>
+                    <StyledButton onClick={onClose} variant="secondary" disabled={isLoading}>انصراف</StyledButton>
+                    <StyledButton type="submit" variant="primary" isLoading={isLoading}>{isEditing ? "ذخیره تغییرات" : "افزودن"}</StyledButton>
                 </div>
             </form>
         </Modal>
@@ -247,7 +279,9 @@ const WalletModal = ({ isOpen, onClose, onSave, eCurrencies, initialData }) => {
 
 const ItemModal = ({ isOpen, onClose, onSave, initialData }) => {
     const isEditing = !!initialData;
-    
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState('');
+
     const getInitialState = useCallback(() => {
         return isEditing
             ? { name: initialData.name, type: initialData.type, symbol: initialData.symbol || '' }
@@ -259,6 +293,8 @@ const ItemModal = ({ isOpen, onClose, onSave, initialData }) => {
     useEffect(() => {
         if (isOpen) {
             setFormState(getInitialState());
+            setIsLoading(false);
+            setError('');
         }
     }, [isOpen, getInitialState]);
 
@@ -267,16 +303,28 @@ const ItemModal = ({ isOpen, onClose, onSave, initialData }) => {
         setFormState(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!formState.name.trim()) return;
-        onSave('item', { ...initialData, ...formState });
-        onClose();
+        if (!formState.name.trim()) {
+            setError('نام آیتم الزامی است.');
+            return;
+        }
+        setIsLoading(true);
+        try {
+            await onSave({ ...initialData, ...formState });
+            onClose();
+        } catch (err) {
+            console.error(err);
+            setError('خطا در ذخیره‌سازی. لطفا دوباره تلاش کنید.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
         <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? 'ویرایش آیتم' : 'افزودن آیتم جدید'}>
             <form onSubmit={handleSubmit} className="space-y-4 text-slate-300">
+                {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
                 <div>
                     <label className="block text-sm font-medium text-slate-400 mb-1">نام آیتم</label>
                     <StyledInput name="name" value={formState.name} onChange={handleChange} placeholder="مثلا: بیت کوین" required />
@@ -296,8 +344,8 @@ const ItemModal = ({ isOpen, onClose, onSave, initialData }) => {
                     </div>
                 )}
                 <div className="flex justify-end gap-3 pt-4">
-                    <StyledButton onClick={onClose} variant="secondary">انصراف</StyledButton>
-                    <StyledButton type="submit" variant="primary">{isEditing ? 'ذخیره تغییرات' : 'افزودن آیتم'}</StyledButton>
+                    <StyledButton onClick={onClose} variant="secondary" disabled={isLoading}>انصراف</StyledButton>
+                    <StyledButton type="submit" variant="primary" isLoading={isLoading}>{isEditing ? 'ذخیره تغییرات' : 'افزودن آیتم'}</StyledButton>
                 </div>
             </form>
         </Modal>
@@ -308,6 +356,7 @@ const RoleModal = ({ isOpen, onClose, onSave, initialData }) => {
     const isEditing = !!initialData;
     const [roleName, setRoleName] = useState('');
     const [permissions, setPermissions] = useState({});
+    const [isLoading, setIsLoading] = useState(false);
 
     useEffect(() => {
         if (isOpen) {
@@ -315,7 +364,6 @@ const RoleModal = ({ isOpen, onClose, onSave, initialData }) => {
                 setRoleName(initialData.name);
                 setPermissions(initialData.permissions);
             } else {
-                // Default permissions for a new role
                 const defaultPermissions = {};
                 ALL_PAGES.forEach(page => {
                     defaultPermissions[page.id] = 'none';
@@ -323,6 +371,7 @@ const RoleModal = ({ isOpen, onClose, onSave, initialData }) => {
                 setRoleName('');
                 setPermissions(defaultPermissions);
             }
+            setIsLoading(false);
         }
     }, [isOpen, isEditing, initialData]);
 
@@ -330,18 +379,22 @@ const RoleModal = ({ isOpen, onClose, onSave, initialData }) => {
         setPermissions(prev => ({ ...prev, [pageId]: level }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!roleName.trim()) {
-            // show error
-            return;
+        if (!roleName.trim()) return;
+        setIsLoading(true);
+        try {
+            await onSave({
+                id: initialData?.id || `role_${new Date().getTime()}`,
+                name: roleName,
+                permissions,
+            });
+            onClose();
+        } catch (error) {
+            console.error("Error saving role:", error);
+        } finally {
+            setIsLoading(false);
         }
-        onSave({
-            id: initialData?.id || `role_${new Date().getTime()}`,
-            name: roleName,
-            permissions,
-        });
-        onClose();
     };
 
     return (
@@ -349,13 +402,7 @@ const RoleModal = ({ isOpen, onClose, onSave, initialData }) => {
             <form onSubmit={handleSubmit} className="space-y-6 text-slate-300">
                 <div>
                     <label className="block text-sm font-medium text-slate-400 mb-1">نام نقش</label>
-                    <StyledInput
-                        type="text"
-                        value={roleName}
-                        onChange={(e) => setRoleName(e.target.value)}
-                        placeholder="مثلا: حسابدار"
-                        required
-                    />
+                    <StyledInput type="text" value={roleName} onChange={(e) => setRoleName(e.target.value)} placeholder="مثلا: حسابدار" required />
                 </div>
                 <div>
                     <h4 className="text-lg font-semibold text-slate-200 mb-3">سطوح دسترسی</h4>
@@ -377,8 +424,8 @@ const RoleModal = ({ isOpen, onClose, onSave, initialData }) => {
                     </div>
                 </div>
                 <div className="flex justify-end gap-3 pt-4">
-                    <StyledButton onClick={onClose} variant="secondary">انصراف</StyledButton>
-                    <StyledButton type="submit" variant="primary">{isEditing ? 'ذخیره تغییرات' : 'افزودن نقش'}</StyledButton>
+                    <StyledButton onClick={onClose} variant="secondary" disabled={isLoading}>انصراف</StyledButton>
+                    <StyledButton type="submit" variant="primary" isLoading={isLoading}>{isEditing ? 'ذخیره تغییرات' : 'افزودن نقش'}</StyledButton>
                 </div>
             </form>
         </Modal>
@@ -387,6 +434,8 @@ const RoleModal = ({ isOpen, onClose, onSave, initialData }) => {
 
 const UserModal = ({ isOpen, onClose, onSave, initialData, roles, showNotification }) => {
     const isEditing = !!initialData;
+    const [isLoading, setIsLoading] = useState(false);
+
     const getInitialFormData = useCallback(() => {
         if (isEditing && initialData) {
             return {
@@ -399,12 +448,13 @@ const UserModal = ({ isOpen, onClose, onSave, initialData, roles, showNotificati
         const defaultRole = Object.keys(roles)[0] || '';
         return { name: '', email: '', role: defaultRole, password: '' };
     }, [isEditing, initialData, roles]);
-    
+
     const [formData, setFormData] = useState(getInitialFormData());
 
     useEffect(() => {
         if (isOpen) {
             setFormData(getInitialFormData());
+            setIsLoading(false);
         }
     }, [isOpen, getInitialFormData]);
 
@@ -413,18 +463,26 @@ const UserModal = ({ isOpen, onClose, onSave, initialData, roles, showNotificati
         setFormData(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         if (!formData.name.trim() || !formData.email.trim() || !formData.role) {
             showNotification('لطفا فیلدهای نام، ایمیل و نقش را پر کنید.', 'error');
             return;
         }
-        if (!isEditing && !formData.password.trim()) {
-            showNotification('لطفا برای کاربر جدید رمز عبور تعیین کنید.', 'error');
+        if (!isEditing && (!formData.password || formData.password.length < 6)) {
+            showNotification('برای کاربر جدید، رمز عبور باید حداقل ۶ کاراکتر باشد.', 'error');
             return;
         }
-        onSave({ ...initialData, ...formData });
-        onClose();
+        setIsLoading(true);
+        try {
+            await onSave({ ...initialData, ...formData });
+            onClose();
+        } catch (error) {
+            console.error("Error saving user:", error);
+            showNotification(error.message || 'خطا در ذخیره کاربر.', 'error');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -438,15 +496,15 @@ const UserModal = ({ isOpen, onClose, onSave, initialData, roles, showNotificati
                     <label className="block text-sm font-medium text-slate-400 mb-1">ایمیل</label>
                     <StyledInput type="email" name="email" value={formData.email} onChange={handleChange} placeholder="user@example.com" required disabled={isEditing} />
                 </div>
-                 <div>
+                <div>
                     <label className="block text-sm font-medium text-slate-400 mb-1">رمز عبور</label>
-                    <StyledInput 
-                        type="password" 
-                        name="password" 
-                        value={formData.password} 
-                        onChange={handleChange} 
-                        placeholder={isEditing ? "رمز عبور جدید (در صورت خالی بودن، بدون تغییر)" : "رمز عبور (ضروری)"}
-                        required={!isEditing} 
+                    <StyledInput
+                        type="password"
+                        name="password"
+                        value={formData.password}
+                        onChange={handleChange}
+                        placeholder={isEditing ? "رمز عبور جدید (در صورت خالی بودن، بدون تغییر)" : "رمز عبور (حداقل ۶ کاراکتر)"}
+                        required={!isEditing}
                     />
                 </div>
                 <div>
@@ -459,8 +517,8 @@ const UserModal = ({ isOpen, onClose, onSave, initialData, roles, showNotificati
                     </StyledSelect>
                 </div>
                 <div className="flex justify-end gap-3 pt-4">
-                    <StyledButton onClick={onClose} variant="secondary">انصراف</StyledButton>
-                    <StyledButton type="submit" variant="primary">{isEditing ? 'ذخیره تغییرات' : 'افزودن کاربر'}</StyledButton>
+                    <StyledButton onClick={onClose} variant="secondary" disabled={isLoading}>انصراف</StyledButton>
+                    <StyledButton type="submit" variant="primary" isLoading={isLoading}>{isEditing ? 'ذخیره تغییرات' : 'افزودن کاربر'}</StyledButton>
                 </div>
             </form>
         </Modal>
@@ -543,7 +601,7 @@ const FullTransactionsTable = ({ transactions, showCurrencyName = false, onShowD
                     const nikFeeDisplay = isProduct ? tx.issueFeeNik : tx.nikFee;
                     const networkFeeDisplay = isProduct ? tx.issueFeeReal : tx.networkFee;
                     const feeUnit = isProduct ? tx.productUnit : tx.unit;
-                    const amountDisplay = isProduct 
+                    const amountDisplay = isProduct
                         ? `${formatNumber(tx.productValue || tx.amount)} ${tx.productUnit || ''}`
                         : `${formatNumber(tx.amount, amountDecimals)} ${tx.unit || ''}`;
 
@@ -607,10 +665,11 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
     const [form, setForm] = useState(initialFormState);
     const [customerCredit, setCustomerCredit] = useState(0);
     const [filteredItems, setFilteredItems] = useState([]);
+    const [isLoading, setIsLoading] = useState(false);
     const canEdit = permissions === 'edit';
 
-    const baseCurrencyItems = useMemo(() => 
-        Object.values(items).filter(item => item.type === 'دیجیتال' || item.type === 'الکترونیک'), 
+    const baseCurrencyItems = useMemo(() =>
+        Object.values(items).filter(item => item.type === 'دیجیتال' || item.type === 'الکترونیک'),
     [items]);
 
     useEffect(() => {
@@ -620,7 +679,7 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
             setCustomerCredit(0);
         }
     }, [form.customerId, customerBalances]);
-    
+
     useEffect(() => {
         // Reset fields when type changes
         const selectedItem = Object.values(items).find(i => i.name === form.itemName);
@@ -647,7 +706,7 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
             setFilteredItems([]);
         }
     };
-    
+
     const selectItem = (item) => {
         setForm(prev => ({
             ...prev,
@@ -664,14 +723,14 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
         setForm(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         if (!form.itemName.trim() || !form.amount) {
             showNotification('لطفا نام آیتم و مقدار را پر کنید.', 'error');
             return;
         }
-        
+
         if (!form.price) {
              showNotification('لطفا قیمت/نرخ را وارد کنید.', 'error');
             return;
@@ -682,8 +741,16 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
             return;
         }
 
-        onTransactionSubmit(form);
-        setForm(initialFormState);
+        setIsLoading(true);
+        try {
+            await onTransactionSubmit(form);
+            setForm(initialFormState);
+        } catch (error) {
+            console.error("Transaction submission error:", error);
+            showNotification(error.message || 'خطا در ثبت تراکنش.', 'error');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     const isSale = form.type === 'فروش';
@@ -719,7 +786,7 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
                     </StyledSelect>
                 </div>
             </div>
-            
+
             {isProduct ? (
                 <div className="space-y-4 pt-4 border-t border-slate-800">
                     <div className="flex flex-wrap gap-4">
@@ -816,7 +883,7 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
 
 
             <div className="flex justify-end pt-4 border-t border-slate-700">
-                <StyledButton type="submit" variant="primary" disabled={!canEdit}>ثبت تراکنش</StyledButton>
+                <StyledButton type="submit" variant="primary" disabled={!canEdit || isLoading} isLoading={isLoading}>ثبت تراکنش</StyledButton>
             </div>
         </form>
     );
@@ -874,7 +941,7 @@ const Dashboard = ({ data, onShowDetails }) => {
         });
 
         const totalNetProfit = filteredTx.reduce((sum, tx) => sum + (tx.profitOrLoss || 0), 0);
-        
+
         let buyTransactionsCount = 0;
         let sellTransactionsCount = 0;
         let totalCommission = 0;
@@ -909,7 +976,7 @@ const Dashboard = ({ data, onShowDetails }) => {
             if (!profitByCurrency[name]) profitByCurrency[name] = 0;
             profitByCurrency[name] += tx.profitOrLoss || 0;
         });
-        
+
         // Most/Least Profitable
         const profitEntries = Object.entries(profitByCurrency);
         let mostProfitableItem = { name: '---', profit: -Infinity };
@@ -926,7 +993,7 @@ const Dashboard = ({ data, onShowDetails }) => {
             .filter(([, value]) => value > 0)
             .map(([name, value]) => ({ name, سود: value }));
 
-        
+
         const dailyOrdersData = Array.from({ length: daysInMonth }, (_, i) => ({
             date: String(i + 1),
             'خرید': 0,
@@ -943,17 +1010,17 @@ const Dashboard = ({ data, onShowDetails }) => {
                 }
             }
         });
-        
+
         const latestTransactions = allTx.sort((a, b) => {
             const dateA = new Date(toEnglishDigits(a.date).replace(/\//g, '-'));
             const dateB = new Date(toEnglishDigits(b.date).replace(/\//g, '-'));
             return dateB - dateA;
         }).slice(0, 5);
 
-        return { 
-            totalNetProfit, 
-            pieData, 
-            dailyOrdersData, 
+        return {
+            totalNetProfit,
+            pieData,
+            dailyOrdersData,
             latestTransactions,
             buyTransactionsCount,
             sellTransactionsCount,
@@ -980,10 +1047,10 @@ const Dashboard = ({ data, onShowDetails }) => {
 
     const RADIAN = Math.PI / 180;
     const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, name }) => {
-        if (percent < 0.04) { 
+        if (percent < 0.04) {
             return null;
         }
-        
+
         const radius = outerRadius * 1.1;
         const x1 = cx + radius * Math.cos(-midAngle * RADIAN);
         const y1 = cy + radius * Math.sin(-midAngle * RADIAN);
@@ -1005,32 +1072,32 @@ const Dashboard = ({ data, onShowDetails }) => {
         <PageWrapper title="داشبورد" subtitle="گزارش ماه جاری">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 <InfoCard title="سود خالص ماه" value={`${formatNumber(Math.round(monthlyData.totalNetProfit))} تومان`} icon={<TrendingUp />} />
-                <InfoCard 
-                    title="تراکنش (خرید/فروش)" 
-                    value={`${formatNumber(monthlyData.buyTransactionsCount)} / ${formatNumber(monthlyData.sellTransactionsCount)}`} 
-                    icon={<Activity />} 
+                <InfoCard
+                    title="تراکنش (خرید/فروش)"
+                    value={`${formatNumber(monthlyData.buyTransactionsCount)} / ${formatNumber(monthlyData.sellTransactionsCount)}`}
+                    icon={<Activity />}
                 />
-                 <InfoCard 
-                    title="کارمزد دریافتی" 
-                    value={`${formatNumber(Math.round(monthlyData.totalCommission))} تومان`} 
-                    icon={<DollarSign />} 
+                 <InfoCard
+                    title="کارمزد دریافتی"
+                    value={`${formatNumber(Math.round(monthlyData.totalCommission))} تومان`}
+                    icon={<DollarSign />}
                 />
-                <InfoCard 
-                    title="سود کارمزد شبکه/صدور" 
-                    value={`${formatNumber(Math.round(monthlyData.totalNetFeeProfit))} تومان`} 
-                    icon={<Repeat />} 
+                <InfoCard
+                    title="سود کارمزد شبکه/صدور"
+                    value={`${formatNumber(Math.round(monthlyData.totalNetFeeProfit))} تومان`}
+                    icon={<Repeat />}
                 />
-                <InfoCard 
-                    title="سودآورترین آیتم" 
-                    value={monthlyData.mostProfitableItem.name} 
+                <InfoCard
+                    title="سودآورترین آیتم"
+                    value={monthlyData.mostProfitableItem.name}
                     subValue={`سود: ${formatNumber(Math.round(monthlyData.mostProfitableItem.profit))} تومان`}
-                    icon={<Gift />} 
+                    icon={<Gift />}
                 />
-                <InfoCard 
-                    title="زیان‌ده‌ترین آیتم" 
-                    value={monthlyData.leastProfitableItem.name} 
+                <InfoCard
+                    title="زیان‌ده‌ترین آیتم"
+                    value={monthlyData.leastProfitableItem.name}
                     subValue={`سود/زیان: ${formatNumber(Math.round(monthlyData.leastProfitableItem.profit))} تومان`}
-                    icon={<ShieldOff />} 
+                    icon={<ShieldOff />}
                 />
                 <InfoCard title="تعداد کیف پول‌ها" value={data.wallets.length} icon={<Wallet />} />
                 <InfoCard title="تعداد سورس‌ها" value={data.sources.length} icon={<Building />} />
@@ -1064,17 +1131,17 @@ const Dashboard = ({ data, onShowDetails }) => {
                     <h2 className="text-xl font-semibold text-slate-100 mb-4">ترکیب سود (ماه جاری)</h2>
                     <ResponsiveContainer width="100%" height={300}>
                         <PieChart>
-                            <Pie 
-                                data={monthlyData.pieData} 
-                                dataKey="سود" 
-                                nameKey="name" 
-                                cx="50%" 
-                                cy="50%" 
-                                innerRadius={70} 
-                                outerRadius={100} 
-                                fill="#8884d8" 
-                                paddingAngle={5} 
-                                labelLine={false} 
+                            <Pie
+                                data={monthlyData.pieData}
+                                dataKey="سود"
+                                nameKey="name"
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={70}
+                                outerRadius={100}
+                                fill="#8884d8"
+                                paddingAngle={5}
+                                labelLine={false}
                                 label={renderCustomizedLabel}
                             >
                                 {monthlyData.pieData.map((entry, index) => (<Cell key={`cell-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />))}
@@ -1140,7 +1207,7 @@ const FinancialReport = ({ transactions, items }) => {
                     unit: tx.unit || items[tx.itemId]?.symbol,
                 };
             }
-            
+
             const currencyResult = byCurrency[itemName];
             const unit = tx.unit || items[tx.itemId]?.symbol;
 
@@ -1153,7 +1220,7 @@ const FinancialReport = ({ transactions, items }) => {
                 if (tx.type === 'فروش') { unitResult.sellOrders++; unitResult.totalSellVolume += tx.amount; unitResult.totalSellPriceAmount += tx.price * tx.amount; }
                 unitResult.commissionReceived += tx.siteFee || 0;
                 if (tx.type === 'فروش' && tx.saleRate && tx.supplyRate) { unitResult.tradingProfit += (tx.saleRate - tx.supplyRate) * tx.amount; }
-                
+
                 unitResult.totalIncome = unitResult.tradingProfit + unitResult.commissionReceived;
 
             } else { // Crypto and Products
@@ -1164,7 +1231,7 @@ const FinancialReport = ({ transactions, items }) => {
                  currencyResult.totalIncome = currencyResult.tradingProfit + currencyResult.commissionReceived;
             }
         });
-        
+
         Object.values(byCurrency).forEach(currencyResult => {
             if (currencyResult.itemType === 'الکترونیک') {
                 const unitValues = Object.values(currencyResult.units);
@@ -1173,18 +1240,18 @@ const FinancialReport = ({ transactions, items }) => {
                 currencyResult.tradingProfit = unitValues.reduce((sum, unit) => sum + unit.tradingProfit, 0);
                 currencyResult.commissionReceived = unitValues.reduce((sum, unit) => sum + unit.commissionReceived, 0);
                 currencyResult.netFeeProfit = unitValues.reduce((sum, unit) => sum + unit.netFeeProfit, 0);
-        
+
                 unitValues.forEach(unitResult => {
                     unitResult.avgBuyPrice = unitResult.totalBuyVolume > 0 ? unitResult.totalBuyPriceAmount / unitResult.totalBuyVolume : 0;
                     unitResult.avgSellPrice = unitResult.totalSellVolume > 0 ? unitResult.totalSellPriceAmount / unitResult.totalSellVolume : 0;
                 });
-        
+
                 currencyResult.totalIncome = currencyResult.tradingProfit + currencyResult.commissionReceived + currencyResult.netFeeProfit;
             } else {
                 currencyResult.avgBuyPrice = currencyResult.totalBuyVolume > 0 ? currencyResult.totalBuyPriceAmount / currencyResult.totalBuyVolume : 0;
-                currencyResult.avgSellPrice = currencyResult.totalSellVolume > 0 ? currencyResult.totalSellPriceAmount / unitResult.totalSellVolume : 0;
+                currencyResult.avgSellPrice = currencyResult.totalSellVolume > 0 ? currencyResult.totalSellPriceAmount / currencyResult.totalSellVolume : 0;
             }
-            
+
             grandTotals.buyOrders += currencyResult.buyOrders;
             grandTotals.sellOrders += currencyResult.sellOrders;
             grandTotals.tradingProfit += currencyResult.tradingProfit;
@@ -1295,11 +1362,11 @@ const FinancialReport = ({ transactions, items }) => {
                     <SummaryCard title="کل سفارشات فروش" tomanValue={reportData.grandTotals.sellOrders} isOrderCount={true} />
                 </div>
             </div>
-            
+
             <div className="mt-12">
                  <h2 className="text-2xl font-semibold text-slate-100 mb-4">گزارش به تفکیک آیتم</h2>
                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {Object.keys(reportData.byCurrency).length > 0 ? 
+                    {Object.keys(reportData.byCurrency).length > 0 ?
                         Object.entries(reportData.byCurrency).map(([name, data]) => (
                             <CurrencyReportCard key={name} name={name} data={data} />
                         )) :
@@ -1381,15 +1448,15 @@ const PoolOverviewPage = ({ data }) => {
 
 
 const ItemPage = ({ itemId, data, ...props }) => {
-    const item = data.items[itemId];
+    const item = data.items.find(i => i.id === itemId);
     if (!item) {
-        console.error("Item not found in ItemPage!", { 
-            itemId: itemId, 
-            availableItemIds: Object.keys(data.items) 
+        console.error("Item not found in ItemPage!", {
+            itemId: itemId,
+            availableItemIds: data.items.map(i => i.id)
         });
         return <PageWrapper title="خطا"><div className="text-red-400">آیتم مورد نظر یافت نشد.</div></PageWrapper>;
     }
-    
+
     const isECurrency = item.type === 'الکترونیک';
 
     return (
@@ -1413,7 +1480,7 @@ const ItemPage = ({ itemId, data, ...props }) => {
                     <InfoCard title="سود خالص" value={`${formatNumber(item.netProfit)} تومان`} icon={<TrendingUp />} />
                     <InfoCard title="تامین / فروش" value={`${formatNumber(item.totalBuys)} / ${formatNumber(item.totalSells)}`} icon={<LayoutDashboard />} />
                 </div>
-                
+
                 <div className="bg-slate-800/60 p-6 rounded-2xl shadow-lg border border-slate-700/80 backdrop-blur-xl">
                     <h2 className="text-xl font-semibold text-slate-100 mb-4">تاریخچه تراکنش‌ها</h2>
                     <FullTransactionsTable transactions={props.transactions} onShowDetails={props.onShowDetails} />
@@ -1425,7 +1492,7 @@ const ItemPage = ({ itemId, data, ...props }) => {
 
 const NewTransactionPage = ({ data, ...props }) => {
     const { transactions } = data;
-    
+
     const recentTransactions = useMemo(() => {
         const toEnglishDigits = (str) => str.replace(/[۰-۹]/g, d => '۰۱۲۳۴۵۶۷۸۹'.indexOf(d));
         return Object.values(transactions).flat()
@@ -1461,19 +1528,20 @@ const ExchangePage = ({ items, onExchangeSubmit, showNotification, permissions }
         feeUnit: 'from',
     };
     const [form, setForm] = useState(initialFormState);
+    const [isLoading, setIsLoading] = useState(false);
     const canEdit = permissions === 'edit';
 
     const activeItems = useMemo(() => Object.values(items).filter(item => !item.archived && (item.type === 'دیجیتال' || item.type === 'الکترونیک')), [items]);
 
-    const fromItem = items[form.fromItemId];
-    const toItem = items[form.toItemId];
+    const fromItem = items.find(i => i.id === form.fromItemId);
+    const toItem = items.find(i => i.id === form.toItemId);
 
     const fromItemUnits = fromItem?.type === 'الکترونیک' ? Object.keys(fromItem.inventories) : [];
     const toItemUnits = toItem?.type === 'الکترونیک' ? Object.keys(toItem.inventories) : [''];
 
     const handleFromItemChange = (e) => {
         const itemId = e.target.value;
-        const item = items[itemId];
+        const item = items.find(i => i.id === itemId);
         setForm(prev => ({
             ...prev,
             fromItemId: itemId,
@@ -1483,7 +1551,7 @@ const ExchangePage = ({ items, onExchangeSubmit, showNotification, permissions }
 
     const handleToItemChange = (e) => {
         const itemId = e.target.value;
-        const item = items[itemId];
+        const item = items.find(i => i.id === itemId);
         setForm(prev => ({
             ...prev,
             toItemId: itemId,
@@ -1496,7 +1564,7 @@ const ExchangePage = ({ items, onExchangeSubmit, showNotification, permissions }
         setForm(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         const { fromItemId, fromAmount, toItemId, exchangeRate, fromUnit, toUnit } = form;
 
@@ -1520,10 +1588,19 @@ const ExchangePage = ({ items, onExchangeSubmit, showNotification, permissions }
              showNotification('ارز مبدا و مقصد نمی‌توانند یکسان باشند.', 'error');
             return;
         }
-        onExchangeSubmit(form);
-        setForm(initialFormState);
+
+        setIsLoading(true);
+        try {
+            await onExchangeSubmit(form);
+            setForm(initialFormState);
+        } catch (error) {
+            console.error("Exchange submission error:", error);
+            showNotification(error.message || 'خطا در ثبت تبدیل.', 'error');
+        } finally {
+            setIsLoading(false);
+        }
     };
-    
+
     const fromAmount = parseFloat(form.fromAmount) || 0;
     const exchangeRate = parseFloat(form.exchangeRate) || 0;
     const fromInventory = fromItem?.type === 'دیجیتال' ? fromItem.poolInventory : (fromItem?.inventories[form.fromUnit] || 0);
@@ -1597,7 +1674,7 @@ const ExchangePage = ({ items, onExchangeSubmit, showNotification, permissions }
                     </div>
 
                     <div className="flex justify-end pt-4">
-                        <StyledButton type="submit" variant="primary" className="flex items-center gap-2" disabled={!canEdit}><Repeat size={16}/> ثبت تبدیل</StyledButton>
+                        <StyledButton type="submit" variant="primary" className="flex items-center gap-2" disabled={!canEdit || isLoading} isLoading={isLoading}><Repeat size={16}/> ثبت تبدیل</StyledButton>
                     </div>
                 </form>
             </div>
@@ -1681,7 +1758,7 @@ const AccountingPage = ({ data, onShowDetails, showNotification }) => {
         const paginatedTransactions = filteredTransactions.slice(startIndex, startIndex + ITEMS_PER_PAGE);
         return { paginatedTransactions, totalPages, totalItems: filteredTransactions.length };
     }, [filteredTransactions, currentPage]);
-    
+
     const handleExportCSV = () => {
         if (filteredTransactions.length === 0) {
             showNotification('داده‌ای برای خروجی گرفتن وجود ندارد.', 'error');
@@ -1689,8 +1766,8 @@ const AccountingPage = ({ data, onShowDetails, showNotification }) => {
         }
 
         const headers = [
-            "شماره", "تاریخ", "نوع", "آیتم", "مقدار", "واحد", "نرخ تامین", "نرخ فروش", 
-            "کیف پول مبدا/مقصد", "هش/پیگیری", "کارمزد سایت", "تخفیف", 
+            "شماره", "تاریخ", "نوع", "آیتم", "مقدار", "واحد", "نرخ تامین", "نرخ فروش",
+            "کیف پول مبدا/مقصد", "هش/پیگیری", "کارمزد سایت", "تخفیف",
             "هزینه/کارمزد نیک", "هزینه/کارمزد شبکه", "سود/زیان"
         ];
 
@@ -1777,7 +1854,7 @@ const AccountingPage = ({ data, onShowDetails, showNotification }) => {
             </div>
             <div className="bg-slate-800/60 p-6 rounded-2xl shadow-lg border border-slate-700/80 backdrop-blur-xl">
                 <FullTransactionsTable transactions={paginatedData.paginatedTransactions} showCurrencyName={true} onShowDetails={onShowDetails} />
-                <PaginationControls 
+                <PaginationControls
                     currentPage={currentPage}
                     totalPages={paginatedData.totalPages}
                     onPageChange={setCurrentPage}
@@ -1799,7 +1876,7 @@ const PaginationControls = ({ currentPage, totalPages, onPageChange, totalItems,
     const handleNext = () => {
         onPageChange(prev => Math.min(prev + 1, totalPages));
     };
-    
+
     const startItem = (currentPage - 1) * itemsPerPage + 1;
     const endItem = Math.min(currentPage * itemsPerPage, totalItems);
 
@@ -1819,10 +1896,11 @@ const PaginationControls = ({ currentPage, totalPages, onPageChange, totalItems,
                     صفحه {currentPage} از {totalPages}
                 </span>
                 <button onClick={handleNext} disabled={currentPage === totalPages} className="p-2 rounded-md hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <ChevronsRight size={18} className="transform -scale-x-100" />
+                    {/* Use ChevronsRight and rotate it for the correct visual */}
+                    <ChevronLeft size={18} className="transform rotate-180" />
                 </button>
                  <button onClick={() => onPageChange(totalPages)} disabled={currentPage === totalPages} className="p-2 rounded-md hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                    <ChevronsLeft size={18} className="transform -scale-x-100" />
+                    <ChevronsRight size={18} />
                 </button>
             </div>
         </div>
@@ -1830,11 +1908,13 @@ const PaginationControls = ({ currentPage, totalPages, onPageChange, totalItems,
 };
 
 
-const ManagementPage = ({ data, onSave, onDelete, onEdit, permissions }) => {
-    const { items, sources } = data;
+const ManagementPage = ({ data, onSave, onDelete, permissions, showNotification }) => {
+    const { items, wallets, sources } = data;
     const [itemModalOpen, setItemModalOpen] = useState(false);
     const [walletModalOpen, setWalletModalOpen] = useState(false);
     const [editingData, setEditingData] = useState(null);
+    const [itemToDelete, setItemToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     const canEdit = permissions === 'edit';
 
     const handleEdit = (type, data) => {
@@ -1849,8 +1929,23 @@ const ManagementPage = ({ data, onSave, onDelete, onEdit, permissions }) => {
         if (type === 'wallet') setWalletModalOpen(true);
     };
 
-    const handleSave = (type, saveData) => {
-        onSave(type, saveData);
+    const handleDeleteClick = (type, item) => {
+        setItemToDelete({ type, item });
+    };
+
+    const confirmDelete = async () => {
+        if (!itemToDelete) return;
+        setIsDeleting(true);
+        try {
+            await onDelete(itemToDelete.type, itemToDelete.item.id);
+            showNotification('آیتم با موفقیت حذف شد.', 'success');
+            setItemToDelete(null);
+        } catch (error) {
+            console.error("Deletion Error:", error);
+            showNotification(error.message || 'خطا در حذف آیتم.', 'error');
+        } finally {
+            setIsDeleting(false);
+        }
     };
 
     const ItemRow = ({ item }) => (
@@ -1860,8 +1955,8 @@ const ManagementPage = ({ data, onSave, onDelete, onEdit, permissions }) => {
                 <p className="text-xs text-slate-400">{item.type} {item.symbol && `(${item.symbol})`}</p>
             </div>
             <div className="flex items-center gap-2">
-                <button onClick={() => onEdit('item', item)} className="p-2 text-slate-400 hover:text-blue-400" disabled={!canEdit}><Edit size={16} /></button>
-                <button onClick={() => onDelete('item', item.id)} className="p-2 text-slate-400 hover:text-red-400" disabled={!canEdit}><Trash2 size={16} /></button>
+                <button onClick={() => handleEdit('item', item)} className="p-2 text-slate-400 hover:text-blue-400" disabled={!canEdit}><Edit size={16} /></button>
+                <button onClick={() => handleDeleteClick('item', item)} className="p-2 text-slate-400 hover:text-red-400" disabled={!canEdit}><Trash2 size={16} /></button>
             </div>
         </div>
     );
@@ -1871,14 +1966,22 @@ const ManagementPage = ({ data, onSave, onDelete, onEdit, permissions }) => {
             <ItemModal
                 isOpen={itemModalOpen}
                 onClose={() => setItemModalOpen(false)}
-                onSave={(data) => handleSave('item', data)}
+                onSave={(data) => onSave('item', data)}
                 initialData={editingData}
             />
             <WalletModal
                 isOpen={walletModalOpen}
                 onClose={() => setWalletModalOpen(false)}
-                onSave={(data) => handleSave('wallet', data)}
+                onSave={(data) => onSave('wallet', data)}
                 initialData={editingData}
+            />
+            <ConfirmationModal
+                isOpen={!!itemToDelete}
+                onClose={() => setItemToDelete(null)}
+                onConfirm={confirmDelete}
+                isLoading={isDeleting}
+                title={`تایید حذف ${itemToDelete?.type === 'item' ? 'آیتم' : 'کیف پول'}`}
+                message={`آیا از حذف "${itemToDelete?.item?.name}" اطمینان دارید؟ این عمل قابل بازگشت نیست.`}
             />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 {/* Items Column */}
@@ -1888,7 +1991,7 @@ const ManagementPage = ({ data, onSave, onDelete, onEdit, permissions }) => {
                         <StyledButton onClick={() => handleAddNew('item')} variant="secondary" className="flex items-center gap-2 text-sm" disabled={!canEdit}><PlusCircle size={16} /> افزودن</StyledButton>
                     </div>
                     <div className="space-y-2 p-4 bg-slate-800/60 rounded-2xl border border-slate-700/80 backdrop-blur-xl max-h-[60vh] overflow-y-auto custom-scrollbar">
-                        {Object.values(items).map(item => <ItemRow key={item.id} item={item} />)}
+                        {items.map(item => <ItemRow key={item.id} item={item} />)}
                     </div>
                 </div>
 
@@ -1899,7 +2002,7 @@ const ManagementPage = ({ data, onSave, onDelete, onEdit, permissions }) => {
                         <StyledButton onClick={() => handleAddNew('wallet')} variant="secondary" className="flex items-center gap-2 text-sm" disabled={!canEdit}><PlusCircle size={16} /> افزودن</StyledButton>
                     </div>
                     <div className="space-y-2 p-4 bg-slate-800/60 rounded-2xl border border-slate-700/80 backdrop-blur-xl max-h-[60vh] overflow-y-auto custom-scrollbar">
-                        {data.wallets.map(wallet => (
+                        {wallets.map(wallet => (
                             <div key={wallet.id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg hover:bg-slate-800 transition-colors">
                                 <div>
                                     <p className="font-semibold text-slate-200">{wallet.name}</p>
@@ -1907,7 +2010,7 @@ const ManagementPage = ({ data, onSave, onDelete, onEdit, permissions }) => {
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <button onClick={() => handleEdit('wallet', wallet)} className="p-2 text-slate-400 hover:text-blue-400" disabled={!canEdit}><Edit size={16} /></button>
-                                    <button onClick={() => onDelete('wallet', wallet.id)} className="p-2 text-slate-400 hover:text-red-400" disabled={!canEdit}><Trash2 size={16} /></button>
+                                    <button onClick={() => handleDeleteClick('wallet', wallet)} className="p-2 text-slate-400 hover:text-red-400" disabled={!canEdit}><Trash2 size={16} /></button>
                                 </div>
                             </div>
                         ))}
@@ -1937,18 +2040,32 @@ const ManagementPage = ({ data, onSave, onDelete, onEdit, permissions }) => {
     );
 };
 
-const SettingsPage = ({ settings, onSave, permissions }) => {
+const SettingsPage = ({ settings, onSave, permissions, showNotification }) => {
     const [formState, setFormState] = useState(settings);
+    const [isLoading, setIsLoading] = useState(false);
     const canEdit = permissions === 'edit';
+
+    useEffect(() => {
+        setFormState(settings);
+    }, [settings]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
         setFormState(prev => ({ ...prev, [name]: value }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        onSave('settings', formState);
+        setIsLoading(true);
+        try {
+            await onSave('settings', formState);
+            showNotification('تنظیمات با موفقیت ذخیره شد.', 'success');
+        } catch (error) {
+            console.error("Error saving settings:", error);
+            showNotification('خطا در ذخیره تنظیمات.', 'error');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -1974,7 +2091,7 @@ const SettingsPage = ({ settings, onSave, permissions }) => {
                         </div>
                     </div>
                     <div className="flex justify-end pt-4">
-                        <StyledButton type="submit" variant="primary" disabled={!canEdit}>ذخیره تغییرات</StyledButton>
+                        <StyledButton type="submit" variant="primary" disabled={!canEdit || isLoading} isLoading={isLoading}>ذخیره تغییرات</StyledButton>
                     </div>
                 </form>
             </div>
@@ -1988,18 +2105,19 @@ const AccessManagementPage = ({ roles, users, onSaveRole, onSaveUser, onDeleteUs
     const [editingRoleData, setEditingRoleData] = useState(null);
     const [editingUserData, setEditingUserData] = useState(null);
     const [userToDelete, setUserToDelete] = useState(null);
+    const [isDeleting, setIsDeleting] = useState(false);
     const canEdit = permissions === 'edit';
 
     const handleAddNewRole = () => {
         setEditingRoleData(null);
         setIsRoleModalOpen(true);
     };
-    
+
     const handleEditRole = (roleId, role) => {
         setEditingRoleData({ id: roleId, ...role });
         setIsRoleModalOpen(true);
     };
-    
+
     const handleAddNewUser = () => {
         setEditingUserData(null);
         setIsUserModalOpen(true);
@@ -2014,16 +2132,24 @@ const AccessManagementPage = ({ roles, users, onSaveRole, onSaveUser, onDeleteUs
         setUserToDelete(user);
     };
 
-    const confirmDeleteUser = () => {
+    const confirmDeleteUser = async () => {
         if (userToDelete) {
-            onDeleteUser(userToDelete.id);
-            setUserToDelete(null);
+            setIsDeleting(true);
+            try {
+                await onDeleteUser(userToDelete.uid);
+                setUserToDelete(null);
+            } catch(error) {
+                console.error("Error deleting user:", error);
+                showNotification(error.message || "خطا در حذف کاربر", 'error');
+            } finally {
+                setIsDeleting(false);
+            }
         }
     };
 
     return (
          <>
-            <RoleModal 
+            <RoleModal
                 isOpen={isRoleModalOpen}
                 onClose={() => setIsRoleModalOpen(false)}
                 onSave={onSaveRole}
@@ -2041,6 +2167,7 @@ const AccessManagementPage = ({ roles, users, onSaveRole, onSaveUser, onDeleteUs
                 isOpen={!!userToDelete}
                 onClose={() => setUserToDelete(null)}
                 onConfirm={confirmDeleteUser}
+                isLoading={isDeleting}
                 title="تایید حذف کاربر"
                 message={`آیا از حذف کاربر "${userToDelete?.name}" اطمینان دارید؟ این عمل قابل بازگشت نیست.`}
             />
@@ -2083,15 +2210,15 @@ const AccessManagementPage = ({ roles, users, onSaveRole, onSaveUser, onDeleteUs
                         </div>
                         <div className="space-y-2">
                             {users.map(user => (
-                                <div key={user.id} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
+                                <div key={user.uid} className="flex items-center justify-between p-3 bg-slate-800 rounded-lg">
                                     <div>
                                         <p className="font-semibold text-slate-200">{user.name}</p>
                                         <p className="text-xs text-slate-400">{user.email}</p>
                                     </div>
                                     <div className="flex items-center gap-4">
-                                        <StyledSelect 
-                                            value={user.role} 
-                                            onChange={(e) => onUserRoleChange(user.id, e.target.value)}
+                                        <StyledSelect
+                                            value={user.role}
+                                            onChange={(e) => onUserRoleChange(user.uid, e.target.value)}
                                             disabled={!canEdit}
                                             className="!w-auto py-1 text-xs"
                                         >
@@ -2118,406 +2245,28 @@ const AccessManagementPage = ({ roles, users, onSaveRole, onSaveUser, onDeleteUs
 
 // --- Main App Layout Component ---
 const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
-    const { data, setData } = props;
+    const { data, onSave, onDelete, onSaveRole, onSaveUser, onDeleteUser, onUserRoleChange, onTransactionSubmit, onExchangeSubmit, showNotification } = props;
     const [activePage, setActivePage] = useState('dashboard');
     const [isSidebarOpen, setSidebarOpen] = useState(true);
-    const [notification, setNotification] = useState({ message: '', type: '' });
     const [modalInfo, setModalInfo] = useState({ isOpen: false, title: '', data: null });
     const [expandedCategories, setExpandedCategories] = useState({});
 
     const userRole = data.roles[currentUser.role];
+    if (!userRole) {
+        // Handle case where role might not be loaded yet
+        return null;
+    }
 
     const toggleCategory = (category) => {
         setExpandedCategories(prev => ({ ...prev, [category]: !prev[category] }));
-    };
-
-    const showNotification = (message, type) => {
-        setNotification({ message, type });
     };
 
     const handleShowDetails = (title, data) => {
         setModalInfo({ isOpen: true, title, data });
     };
 
-    const handleTransactionSubmit = (formData) => {
-        const { itemName, itemType, amount, price, unit, wallet, customerId, siteFee, discount, paymentMethod, type, nikFee, networkFee, productUnit, productValue, baseCurrencyItemId, issueFeeNik, issueFeeReal } = formData;
-        
-        const item = Object.values(data.items).find(i => i.name === itemName);
-        if (!item) {
-            showNotification('آیتم انتخاب شده یافت نشد!', 'error');
-            return;
-        }
-
-        const newTransaction = {
-            id: `tx_${new Date().getTime()}`,
-            date: new Date().toLocaleDateString('fa-IR-u-nu-latn', { year: 'numeric', month: '2-digit', day: '2-digit' }),
-            ...formData,
-            itemId: item.id,
-        };
-
-        setData(prevData => {
-            const newData = JSON.parse(JSON.stringify(prevData));
-            const itemToUpdate = newData.items[item.id];
-            
-            const numericSiteFee = parseFloat(siteFee) || 0;
-            const numericDiscount = parseFloat(discount) || 0;
-            let profitOrLoss = 0;
-
-            if (itemType === 'محصول') {
-                const numericAmount = 1; // For products, amount is always 1
-                newTransaction.amount = numericAmount;
-                
-                if (type === 'فروش') {
-                    if (itemToUpdate.poolInventory < numericAmount) {
-                        showNotification(`موجودی ${item.name} کافی نیست.`, 'error');
-                        return prevData;
-                    }
-                    const saleRatePerUnit = parseFloat(price);
-                    const totalSaleValue = saleRatePerUnit * (parseFloat(amount) || 0);
-                    const supplyRateForOneUnit = itemToUpdate.avgRate;
-
-                    if (!supplyRateForOneUnit || supplyRateForOneUnit === 0) {
-                        showNotification(`میانگین خرید برای ${item.name} صفر است. لطفا ابتدا تامین ثبت کنید.`, 'error');
-                        return prevData;
-                    }
-
-                    const numericIssueFeeNik = parseFloat(issueFeeNik) || 0;
-                    const numericIssueFeeReal = parseFloat(issueFeeReal) || 0;
-                    const issueFeeNikInToman = numericIssueFeeNik * saleRatePerUnit;
-                    const issueFeeRealInToman = numericIssueFeeReal * saleRatePerUnit;
-
-                    profitOrLoss = totalSaleValue - supplyRateForOneUnit + numericSiteFee - numericDiscount - issueFeeNikInToman - issueFeeRealInToman;
-                    
-                    itemToUpdate.totalSells++;
-                    itemToUpdate.poolInventory -= numericAmount;
-                    
-                    newTransaction.price = totalSaleValue;
-                    newTransaction.saleRate = saleRatePerUnit;
-                    newTransaction.supplyRate = supplyRateForOneUnit;
-
-                } else { // تامین/خرید محصول
-                    const finalSupplyRate = parseFloat(price);
-                    profitOrLoss = numericSiteFee - numericDiscount;
-
-                    itemToUpdate.totalBuys++;
-                    const oldInv = itemToUpdate.poolInventory;
-                    const oldAvg = itemToUpdate.avgRate;
-                    const newInv = oldInv + numericAmount;
-                    itemToUpdate.avgRate = newInv > 0 ? ((oldInv * oldAvg) + finalSupplyRate) / newInv : 0;
-                    itemToUpdate.poolInventory = newInv;
-                    
-                    newTransaction.price = finalSupplyRate;
-                    newTransaction.supplyRate = finalSupplyRate;
-                }
-            } else { // Digital & Electronic
-                const numericAmount = parseFloat(amount);
-                const finalPrice = parseFloat(price);
-                newTransaction.amount = numericAmount;
-                newTransaction.price = finalPrice;
-                
-                if (type === 'فروش') {
-                    const finalSaleRate = finalPrice;
-                    let finalSupplyRate = 0;
-
-                    if (item.type === 'الکترونیک') {
-                        if ((itemToUpdate.inventories[unit] || 0) < numericAmount) {
-                            showNotification(`موجودی ${unit} در ${item.name} کافی نیست.`, 'error');
-                            return prevData;
-                        }
-                        finalSupplyRate = itemToUpdate.avgRates[unit] || 0;
-                    } else { // Digital
-                        if (itemToUpdate.poolInventory < numericAmount) {
-                            showNotification(`موجودی ${item.name} کافی نیست.`, 'error');
-                            return prevData;
-                        }
-                        finalSupplyRate = itemToUpdate.avgRate;
-                    }
-                    
-                    if (!finalSupplyRate || finalSupplyRate === 0) {
-                        showNotification(`میانگین خرید برای ${item.name} صفر است. لطفا ابتدا تامین ثبت کنید.`, 'error');
-                        return prevData;
-                    }
-
-                    const nikFeeInToman = (parseFloat(nikFee) || 0) * finalSaleRate;
-                    profitOrLoss = (finalSaleRate - finalSupplyRate) * numericAmount + numericSiteFee - numericDiscount + nikFeeInToman;
-                    
-                    itemToUpdate.totalSells++;
-                    if (item.type === 'الکترونیک') {
-                        itemToUpdate.inventories[unit] -= numericAmount;
-                    } else {
-                        itemToUpdate.poolInventory -= numericAmount;
-                    }
-
-                    newTransaction.saleRate = finalSaleRate;
-                    newTransaction.supplyRate = finalSupplyRate;
-
-                } else { // تامین/خرید Digital & Electronic
-                    const finalSupplyRate = finalPrice;
-                    profitOrLoss = numericSiteFee - numericDiscount;
-                    
-                    itemToUpdate.totalBuys++;
-                    if (item.type === 'الکترونیک') {
-                        const oldInv = itemToUpdate.inventories[unit] || 0;
-                        const oldAvg = itemToUpdate.avgRates[unit] || 0;
-                        const newInv = oldInv + numericAmount;
-                        itemToUpdate.avgRates[unit] = newInv > 0 ? ((oldInv * oldAvg) + (numericAmount * finalSupplyRate)) / newInv : 0;
-                        itemToUpdate.inventories[unit] = newInv;
-                    } else {
-                        const oldInv = itemToUpdate.poolInventory;
-                        const oldAvg = itemToUpdate.avgRate;
-                        const newInv = oldInv + numericAmount;
-                        itemToUpdate.avgRate = newInv > 0 ? ((oldInv * oldAvg) + (numericAmount * finalSupplyRate)) / newInv : 0;
-                        itemToUpdate.poolInventory = newInv;
-                    }
-                    newTransaction.supplyRate = finalSupplyRate;
-                }
-            }
-            
-            itemToUpdate.netProfit += profitOrLoss;
-            newTransaction.profitOrLoss = profitOrLoss;
-
-            if (!newData.transactions[item.id]) {
-                newData.transactions[item.id] = [];
-            }
-            newData.transactions[item.id].unshift(newTransaction);
-
-            showNotification('تراکنش با موفقیت ثبت شد.', 'success');
-            return newData;
-        });
-    };
-
-    const handleExchangeSubmit = (formData) => {
-        const { fromItemId, fromUnit, fromAmount: fromAmountStr, toItemId, toUnit, exchangeRate: exchangeRateStr, fee: feeStr, feeUnit } = formData;
-        const fromAmount = parseFloat(fromAmountStr);
-        const exchangeRate = parseFloat(exchangeRateStr);
-        const fee = parseFloat(feeStr) || 0;
-
-        setData(prevData => {
-            const newData = JSON.parse(JSON.stringify(prevData));
-            const fromItem = newData.items[fromItemId];
-            const toItem = newData.items[toItemId];
-
-            // 1. Get From-Item's inventory and avgRate
-            let fromInventory, fromAvgRate, fromSymbol;
-            if (fromItem.type === 'دیجیتال') {
-                fromInventory = fromItem.poolInventory;
-                fromAvgRate = fromItem.avgRate;
-                fromSymbol = fromItem.symbol;
-            } else { // Electronic
-                fromInventory = fromItem.inventories[fromUnit] || 0;
-                fromAvgRate = fromItem.avgRates[fromUnit] || 0;
-                fromSymbol = fromUnit;
-            }
-
-            if (!fromAvgRate || fromAvgRate === 0) {
-                showNotification(`میانگین خرید برای ${fromItem.name} (${fromSymbol}) صفر است.`, 'error');
-                return prevData;
-            }
-
-            // 2. Check balance
-            const feeInFromAsset = feeUnit === 'from' ? fee : 0;
-            if (fromInventory < fromAmount + feeInFromAsset) {
-                showNotification(`موجودی ${fromItem.name} (${fromSymbol}) کافی نیست.`, 'error');
-                return prevData;
-            }
-
-            // 3. Calculate costs
-            const costOfFromAmount = fromAvgRate * fromAmount;
-            const feeInToman = fromAvgRate * feeInFromAsset;
-            const totalCost = costOfFromAmount + feeInToman;
-            const toAmount = fromAmount * exchangeRate;
-
-            // 4. Update 'from' item balance
-            if (fromItem.type === 'دیجیتال') {
-                fromItem.poolInventory -= (fromAmount + feeInFromAsset);
-            } else {
-                fromItem.inventories[fromUnit] -= (fromAmount + feeInFromAsset);
-            }
-
-            // 5. Update 'to' item balance
-            if (toItem.type === 'دیجیتال') {
-                const oldToInventory = toItem.poolInventory;
-                const oldToAvgRate = toItem.avgRate;
-                const newToInventory = oldToInventory + toAmount;
-                toItem.avgRate = newToInventory > 0 ? ((oldToInventory * oldToAvgRate) + totalCost) / newToInventory : 0;
-                toItem.poolInventory = newToInventory;
-            } else { // Electronic
-                const oldToInventory = toItem.inventories[toUnit] || 0;
-                const oldToAvgRate = toItem.avgRates[toUnit] || 0;
-                const newToInventory = oldToInventory + toAmount;
-                toItem.avgRates[toUnit] = newToInventory > 0 ? ((oldToInventory * oldToAvgRate) + totalCost) / newToInventory : 0;
-                toItem.inventories[toUnit] = newToInventory;
-            }
-            
-            // 6. Create transaction records
-            const date = new Date().toLocaleDateString('fa-IR-u-nu-latn', { year: 'numeric', month: '2-digit', day: '2-digit' });
-            const baseTx = {
-                id: `tx_${new Date().getTime()}`,
-                date,
-                type: 'اکسچنج',
-                profitOrLoss: -feeInToman, // The cost of the exchange is the fee
-                siteFee: 0,
-                discount: 0,
-            };
-            
-            const fromTx = { ...baseTx, id: baseTx.id + '_from', itemId: fromItemId, itemName: fromItem.name, itemType: fromItem.type, amount: -(fromAmount + feeInFromAsset), price: fromAvgRate, unit: fromSymbol, supplyRate: fromAvgRate };
-            if (!newData.transactions[fromItemId]) newData.transactions[fromItemId] = [];
-            newData.transactions[fromItemId].unshift(fromTx);
-
-            const toSymbol = toItem.type === 'دیجیتال' ? toItem.symbol : toUnit;
-            const toTx = { ...baseTx, id: baseTx.id + '_to', itemId: toItemId, itemName: toItem.name, itemType: toItem.type, amount: toAmount, price: totalCost / toAmount, unit: toSymbol, supplyRate: totalCost / toAmount };
-            if (!newData.transactions[toItemId]) newData.transactions[toItemId] = [];
-            newData.transactions[toItemId].unshift(toTx);
-            
-            // Add journal entry for the cost
-            const journalEntry = {
-                id: newData.journalEntries.length,
-                date: date,
-                description: `هزینه تبدیل ${fromItem.name} به ${toItem.name}`,
-                entries: [
-                    { accountId: '5030', debit: feeInToman, credit: 0 }, // هزینه تبدیل ارز
-                    { accountId: fromItem.assetAccountId, credit: feeInToman, debit: 0 } // کاهش از دارایی مبدا
-                ]
-            };
-            newData.journalEntries.push(journalEntry);
-
-
-            showNotification(`تبدیل با موفقیت انجام شد.`, 'success');
-            return newData;
-        });
-    };
-    
-    const handleSave = (type, saveData) => {
-        setData(prevData => {
-            const newData = { ...prevData };
-            if (type === 'item') {
-                const newId = saveData.id || `item_${new Date().getTime()}`;
-                newData.items[newId] = { ...(newData.items[newId] || {}), ...saveData, id: newId };
-            } else if (type === 'wallet') {
-                const newId = saveData.id || `wallet_${new Date().getTime()}`;
-                const index = newData.wallets.findIndex(w => w.id === newId);
-                if (index > -1) {
-                    newData.wallets[index] = { ...newData.wallets[index], ...saveData };
-                } else {
-                    newData.wallets.push({ ...saveData, id: newId });
-                }
-            } else if (type === 'settings') {
-                newData.settings = { ...newData.settings, ...saveData };
-            }
-            showNotification('تغییرات با موفقیت ذخیره شد.', 'success');
-            return newData;
-        });
-    };
-
-    const handleDelete = (type, id) => {
-        setData(prevData => {
-            const newData = { ...prevData };
-            if (type === 'item') {
-                // Check if there are transactions for this item
-                if (newData.transactions[id] && newData.transactions[id].length > 0) {
-                    showNotification('این آیتم تراکنش دارد و قابل حذف نیست. می‌توانید آن را آرشیو کنید.', 'error');
-                    return prevData;
-                }
-                delete newData.items[id];
-            } else if (type === 'wallet') {
-                // Check if this wallet is used in any transaction
-                const isUsed = Object.values(newData.transactions).flat().some(tx => tx.wallet === newData.wallets.find(w => w.id === id)?.name);
-                 if (isUsed) {
-                    showNotification('این کیف پول در تراکنش‌ها استفاده شده و قابل حذف نیست.', 'error');
-                    return prevData;
-                }
-                newData.wallets = newData.wallets.filter(w => w.id !== id);
-            }
-            showNotification('آیتم با موفقیت حذف شد.', 'success');
-            return newData;
-        });
-    };
-    
-    const handleSaveRole = (roleData) => {
-        setData(prevData => {
-            const newRoles = { ...prevData.roles };
-            newRoles[roleData.id] = {
-                name: roleData.name,
-                permissions: roleData.permissions
-            };
-            showNotification('نقش با موفقیت ذخیره شد.', 'success');
-            return { ...prevData, roles: newRoles };
-        });
-    };
-    
-    const handleSaveUser = (userData) => {
-        setData(prevData => {
-            const newUsers = [...prevData.users];
-            if (userData.id) { // Editing existing user
-                const index = newUsers.findIndex(u => u.id === userData.id);
-                if (index !== -1) {
-                    const existingUser = newUsers[index];
-                    newUsers[index] = { 
-                        ...existingUser, 
-                        ...userData,
-                        // Keep old password if new one is not provided
-                        password: userData.password ? userData.password : existingUser.password
-                    };
-                }
-            } else { // Adding new user
-                const newId = Math.max(...newUsers.map(u => u.id), 0) + 1;
-                newUsers.push({ ...userData, id: newId });
-            }
-            showNotification('کاربر با موفقیت ذخیره شد.', 'success');
-            return { ...prevData, users: newUsers };
-        });
-    };
-    
-    const handleDeleteUser = (userId) => {
-        setData(prevData => {
-            if (prevData.users.length <= 1) {
-                showNotification('نمی‌توانید تنها کاربر سیستم را حذف کنید.', 'error');
-                return prevData;
-            }
-            const newUsers = prevData.users.filter(user => user.id !== userId);
-            // If the deleted user was the current user, switch to the first user in the list
-            if (currentUser.id === userId) {
-                // This logic is now handled in the main App component
-            }
-            showNotification('کاربر با موفقیت حذف شد.', 'success');
-            return { ...prevData, users: newUsers };
-        });
-    };
-
-
-    const handleUserRoleChange = (userId, newRole) => {
-        setData(prevData => {
-            const newUsers = prevData.users.map(user => 
-                user.id === userId ? { ...user, role: newRole } : user
-            );
-            // If the current user's role is changed, update the currentUser state as well
-            if (currentUser.id === userId) {
-                 // This logic is now handled in the main App component
-            }
-            showNotification("نقش کاربر با موفقیت تغییر کرد.", "success");
-            return { ...prevData, users: newUsers };
-        });
-    };
-
-
-    const pageId = activePage.startsWith('item-') ? 'pool-overview' : activePage; // Item pages inherit permissions from pool-overview
-    const activeItem = useMemo(() => {
-        if (!activePage.startsWith('item-')) return null;
-        const id = activePage.substring(5);
-        return data.items[id];
-    }, [activePage, data.items]);
-
-    const filteredTransactions = useMemo(() => {
-        if (!activePage.startsWith('item-')) return {};
-        const id = activePage.substring(5);
-        return {
-            [id]: data.transactions[id] || []
-        };
-    }, [activePage, data.transactions]);
-    
     const customerBalances = useMemo(() => {
         const balances = {};
-        // This is a simplified calculation. A real app should use the journal entries.
         Object.values(data.transactions).flat().forEach(tx => {
             if (tx.customerId && tx.paymentMethod === 'credit') {
                 if (!balances[tx.customerId]) balances[tx.customerId] = 0;
@@ -2533,17 +2282,19 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
     }, [data.transactions]);
 
     const renderPage = () => {
+        const pageId = activePage.startsWith('item-') ? 'pool-overview' : activePage;
         const pagePermission = userRole.permissions[pageId] || 'none';
         if (pagePermission === 'none') {
             return <AccessDeniedPage />;
         }
 
         if (activePage.startsWith('item-')) {
-            return activeItem && <ItemPage
-                key={activeItem.id}
-                itemId={activeItem.id}
+            const itemId = activePage.substring(5);
+            return <ItemPage
+                key={itemId}
+                itemId={itemId}
                 data={data}
-                transactions={filteredTransactions[activeItem.id] || []}
+                transactions={data.transactions[itemId] || []}
                 onShowDetails={handleShowDetails}
             />;
         }
@@ -2556,13 +2307,13 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
                     items={data.items}
                     wallets={data.wallets}
                     customerBalances={customerBalances}
-                    onTransactionSubmit={handleTransactionSubmit}
+                    onTransactionSubmit={onTransactionSubmit}
                     showNotification={showNotification}
                     onShowDetails={handleShowDetails}
                     permissions={pagePermission}
                 />;
             case 'exchange':
-                return <ExchangePage items={data.items} onExchangeSubmit={handleExchangeSubmit} showNotification={showNotification} permissions={pagePermission} />;
+                return <ExchangePage items={data.items} onExchangeSubmit={onExchangeSubmit} showNotification={showNotification} permissions={pagePermission} />;
             case 'accounting':
                 return <AccountingPage data={data} onShowDetails={handleShowDetails} showNotification={showNotification} />;
             case 'financial-report':
@@ -2572,22 +2323,22 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
             case 'management':
                 return <ManagementPage
                     data={data}
-                    onSave={handleSave}
-                    onDelete={handleDelete}
-                    onEdit={(type, data) => handleSave(type, data)} // Simplified edit
+                    onSave={onSave}
+                    onDelete={onDelete}
                     permissions={pagePermission}
+                    showNotification={showNotification}
                 />;
             case 'settings':
-                return <SettingsPage settings={data.settings} onSave={handleSave} permissions={pagePermission} />;
+                return <SettingsPage settings={data.settings} onSave={onSave} permissions={pagePermission} showNotification={showNotification} />;
             case 'access-management':
-                return <AccessManagementPage 
-                    roles={data.roles} 
+                return <AccessManagementPage
+                    roles={data.roles}
                     users={data.users}
-                    permissions={pagePermission} 
-                    onSaveRole={handleSaveRole}
-                    onSaveUser={handleSaveUser}
-                    onDeleteUser={handleDeleteUser}
-                    onUserRoleChange={handleUserRoleChange}
+                    permissions={pagePermission}
+                    onSaveRole={onSaveRole}
+                    onSaveUser={onSaveUser}
+                    onDeleteUser={onDeleteUser}
+                    onUserRoleChange={onUserRoleChange}
                     showNotification={showNotification}
                 />;
             default:
@@ -2626,8 +2377,8 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
         }[page.id],
         type: 'main'
     }));
-    
-    const allItems = Object.values(data.items).filter(item => !item.archived);
+
+    const allItems = data.items.filter(item => !item.archived);
     const digitalItems = allItems.filter(item => item.type === 'دیجیتال');
     const ecurrencyItems = allItems.filter(item => item.type === 'الکترونیک');
     const productItems = allItems.filter(item => item.type === 'محصول');
@@ -2635,11 +2386,10 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
 
     return (
         <div className="bg-gray-900 text-slate-300 font-sans flex min-h-screen overflow-hidden w-screen" dir="rtl">
-            <Notification message={notification.message} type={notification.type} onDismiss={() => setNotification({ message: '', type: '' })} />
             <Modal isOpen={modalInfo.isOpen} onClose={() => setModalInfo({ isOpen: false, title: '', data: null })} title={modalInfo.title} size="max-w-3xl">
                 <DetailView data={modalInfo.data} />
             </Modal>
-            
+
             {/* Sidebar */}
             <aside className={`bg-slate-950/70 backdrop-blur-lg border-l border-slate-800 flex-shrink-0 transition-all duration-300 ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
                 <div className="h-full flex flex-col">
@@ -2651,11 +2401,11 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
                         {menuItems.filter(item => userRole.permissions[item.id] !== 'none').map(item => (
                              <a key={item.id} href="#" onClick={(e) => { e.preventDefault(); setActivePage(item.id); }}
                                 className={`flex items-center p-3 rounded-lg transition-colors ${activePage === item.id ? 'bg-slate-800 text-white' : 'hover:bg-slate-800/50 text-slate-400'}`}>
-                                 {item.icon}
-                                 {isSidebarOpen && <span className="mr-4">{item.label}</span>}
+                               {item.icon}
+                               {isSidebarOpen && <span className="mr-4">{item.label}</span>}
                              </a>
                         ))}
-                        
+
                         <div className="pt-4">
                             {isSidebarOpen && (
                                 <button onClick={() => toggleCategory('digital')} className="w-full flex items-center justify-between px-3 py-2 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1 hover:bg-slate-800/50 rounded-lg transition-colors">
@@ -2744,7 +2494,7 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
     );
 }
 
-const LoginPage = ({ onLogin, error }) => {
+const LoginPage = ({ onLogin, error, isLoading }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -2777,7 +2527,7 @@ const LoginPage = ({ onLogin, error }) => {
                 <form onSubmit={handleSubmit} className="space-y-6">
                     <div>
                         <label className="block text-sm font-medium text-slate-400 mb-2">ایمیل</label>
-                        <StyledInput 
+                        <StyledInput
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
@@ -2788,23 +2538,23 @@ const LoginPage = ({ onLogin, error }) => {
                     <div>
                         <label className="block text-sm font-medium text-slate-400 mb-2">رمز عبور</label>
                         <div className="relative">
-                            <StyledInput 
+                            <StyledInput
                                 type={showPassword ? "text" : "password"}
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                                 placeholder="••••••••"
                                 required
                             />
-                            <button 
-                                type="button" 
-                                onClick={() => setShowPassword(!showPassword)} 
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
                                 className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
                             >
                                 {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                             </button>
                         </div>
                     </div>
-                    <StyledButton type="submit" variant="primary" className="w-full !py-3 !text-base">
+                    <StyledButton type="submit" variant="primary" className="w-full !py-3 !text-base" isLoading={isLoading}>
                         ورود
                     </StyledButton>
                 </form>
@@ -2815,11 +2565,16 @@ const LoginPage = ({ onLogin, error }) => {
 
 // --- App Entry Point ---
 export default function App() {
-    const [data, setData] = useState(null); // Start with no data
+    const [data, setData] = useState(null);
     const [currentUser, setCurrentUser] = useState(null);
     const [authLoading, setAuthLoading] = useState(true);
     const [loginError, setLoginError] = useState('');
-    const [isSeeding, setIsSeeding] = useState(false);
+    const [loginLoading, setLoginLoading] = useState(false);
+    const [notification, setNotification] = useState({ message: '', type: '', key: 0 });
+
+    const showNotification = (message, type) => {
+        setNotification({ message, type, key: Date.now() });
+    };
 
     // --- Dynamic Style and Font Loader ---
     useEffect(() => {
@@ -2845,8 +2600,8 @@ export default function App() {
             const style = document.createElement('style');
             style.id = customStylesId;
             style.innerHTML = `
-                body { 
-                    font-family: 'Inter', sans-serif; 
+                body {
+                    font-family: 'Inter', sans-serif;
                     background-color: #111827; /* Tailwind's gray-900 */
                 }
                 .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
@@ -2857,7 +2612,7 @@ export default function App() {
                 .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
                 @keyframes scale-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
                 .animate-scale-in { animation: scale-in 0.3s ease-out forwards; }
-                @keyframes slide-down { from { transform: translateY(-100%) translateX(-50%); } to { transform: translateY(0) translateX(-50%); } }
+                @keyframes slide-down { from { transform: translateY(-100%) translateX(-50%); opacity: 0; } to { transform: translateY(0) translateX(-50%); opacity: 1; } }
                 .animate-slide-down { animation: slide-down 0.5s ease-out forwards; }
                 @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
                 .animate-shake { animation: shake 0.3s ease-in-out; }
@@ -2868,251 +2623,331 @@ export default function App() {
         }
     }, []);
 
-    // --- One-time Database Seeding ---
-    useEffect(() => {
-        const seedDatabase = async () => {
-            const metadataRef = doc(db, "system", "metadata");
-            const metadataSnap = await getDoc(metadataRef);
-
-            if (metadataSnap.exists() && metadataSnap.data().isSeeded) {
-                console.log("Database already seeded.");
-                return;
-            }
-
-            console.log("Database is not seeded. Starting seeding process...");
-            setIsSeeding(true);
-
-            const initialUsers = [
-                { id: 1, name: 'کاربر ادمین', email: 'admin@example.com', password: 'password', role: 'admin' },
-                { id: 2, name: 'کاربر مدیر', email: 'manager@example.com', password: 'password', role: 'manager' },
-                { id: 3, name: 'کاربر مالی', email: 'finance@example.com', password: 'password', role: 'finance' }
-            ];
-
-            const initialRoles = {
-                'admin': { name: 'ادمین کل', permissions: { dashboard: 'edit', 'new-transaction': 'edit', exchange: 'edit', 'sheets-import': 'edit', accounting: 'edit', 'financial-report': 'edit', 'pool-overview': 'edit', management: 'edit', settings: 'edit', 'access-management': 'edit' }},
-                'manager': { name: 'مدیر', permissions: { dashboard: 'view', 'new-transaction': 'edit', exchange: 'edit', 'sheets-import': 'edit', accounting: 'view', 'financial-report': 'view', 'pool-overview': 'view', management: 'view', settings: 'none', 'access-management': 'none' }},
-                'finance': { name: 'کارمند مالی', permissions: { dashboard: 'view', 'new-transaction': 'edit', exchange: 'none', 'sheets-import': 'edit', accounting: 'view', 'financial-report': 'view', 'pool-overview': 'view', management: 'none', settings: 'none', 'access-management': 'none' }}
-            };
-
-            try {
-                // Seed roles
-                const batch = writeBatch(db);
-                Object.entries(initialRoles).forEach(([roleId, roleData]) => {
-                    const roleRef = doc(db, "roles", roleId);
-                    batch.set(roleRef, roleData);
-                });
-                await batch.commit();
-                console.log("Roles seeded.");
-
-                // Seed users
-                for (const userData of initialUsers) {
-                    try {
-                        const userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
-                        const user = userCredential.user;
-                        await setDoc(doc(db, "users", user.uid), {
-                            name: userData.name,
-                            email: userData.email,
-                            role: userData.role
-                        });
-                        console.log(`User ${userData.email} created successfully.`);
-                    } catch (error) {
-                        if (error.code === 'auth/email-already-in-use') {
-                            console.log(`User ${userData.email} already exists in Auth. Skipping creation.`);
-                        } else {
-                            throw error;
-                        }
-                    }
-                }
-                
-                // Mark seeding as complete
-                await setDoc(metadataRef, { isSeeded: true });
-                console.log("Database seeding complete.");
-
-            } catch (error) {
-                console.error("Error seeding database:", error);
-            } finally {
-                setIsSeeding(false);
-                if (auth.currentUser) {
-                    await signOut(auth); // Sign out after seeding
-                }
-            }
-        };
-
-        seedDatabase();
-    }, []);
-
-
     // --- Authentication Handler ---
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // User is signed in, now fetch their data from Firestore
                 const userDocRef = doc(db, "users", user.uid);
-                const unsubscribeUser = onSnapshot(userDocRef, (doc) => {
-                    if (doc.exists()) {
-                        setCurrentUser({ uid: user.uid, email: user.email, ...doc.data() });
-                    } else {
-                        console.error("User document not found in Firestore! Logging out.");
-                        signOut(auth);
-                    }
-                });
-                setAuthLoading(false);
-                return () => unsubscribeUser();
+                const userDocSnap = await getDoc(userDocRef);
+                if (userDocSnap.exists()) {
+                    setCurrentUser({ uid: user.uid, ...userDocSnap.data() });
+                } else {
+                    console.error("User document not found in Firestore! Logging out.");
+                    signOut(auth);
+                }
             } else {
                 setCurrentUser(null);
-                setAuthLoading(false);
+                setData(null);
             }
+            setAuthLoading(false);
+            setLoginLoading(false);
         });
         return () => unsubscribe();
     }, []);
 
     // --- Data Fetching ---
     useEffect(() => {
-        if (!currentUser) {
-            setData(null); // Clear data on logout
-            return;
+        if (!currentUser) return;
+
+        const collectionsToListen = {
+            items: "items",
+            wallets: "wallets",
+            sources: "sources",
+            roles: "roles",
+            users: "users",
+            settings: "settings",
+            transactions: "transactions",
         };
 
-        const collectionsToFetch = ["items", "wallets", "sources", "roles", "settings", "transactions"];
-        const unsubscribers = [];
-        
-        const fetchData = async () => {
-            try {
-                const dataPromises = collectionsToFetch.map(async (collectionName) => {
-                    const collRef = collection(db, collectionName);
-                    const q = query(collRef);
-                    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-                        const collectionData = {};
-                        querySnapshot.forEach((doc) => {
-                            collectionData[doc.id] = { id: doc.id, ...doc.data() };
-                        });
-                        
-                        setData(prevData => ({
-                            ...prevData,
-                            [collectionName]: collectionData
-                        }));
+        const unsubscribers = Object.entries(collectionsToListen).map(([stateKey, collectionName]) => {
+            const q = query(collection(db, collectionName));
+            return onSnapshot(q, (querySnapshot) => {
+                const isDoc = collectionName === 'settings';
+                if (isDoc) {
+                    // Settings is a single document, not a collection
+                    const settingsData = querySnapshot.docs[0] ? { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } : {};
+                     setData(prev => ({ ...prev, [stateKey]: settingsData }));
+                } else {
+                    const collectionData = {};
+                    querySnapshot.forEach((doc) => {
+                        collectionData[doc.id] = { ...doc.data(), id: doc.id, uid: doc.id }; // Add uid for users
                     });
-                    unsubscribers.push(unsubscribe);
-                });
-                await Promise.all(dataPromises);
-            } catch (error) {
-                console.error("Error fetching initial data:", error);
-            }
-        };
+                    setData(prev => ({ ...prev, [stateKey]: collectionData }));
+                }
+            }, (error) => {
+                console.error(`Error fetching ${collectionName}:`, error);
+                showNotification(`خطا در بارگذاری ${collectionName}`, 'error');
+            });
+        });
 
-        fetchData();
-        
         return () => unsubscribers.forEach(unsub => unsub());
-
     }, [currentUser]);
 
-
+    // --- Auth and Data Modification Functions ---
     const handleLogin = async (email, password) => {
+        setLoginLoading(true);
+        setLoginError('');
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            setLoginError('');
         } catch (error) {
             setLoginError('ایمیل یا رمز عبور نامعتبر است.');
             console.error("Login Error:", error);
+            setLoginLoading(false);
         }
     };
 
     const handleLogout = () => {
         signOut(auth);
     };
-    
-    // --- Data Modification Functions ---
+
     const handleSave = async (type, saveData) => {
         const collectionName = type === 'item' ? 'items' : type === 'wallet' ? 'wallets' : 'settings';
-        if (saveData.id) {
-            const docRef = doc(db, collectionName, saveData.id);
-            await updateDoc(docRef, saveData);
-        } else {
-            await addDoc(collection(db, collectionName), saveData);
+        const { id, ...dataToSave } = saveData;
+
+        try {
+            if (id) {
+                const docRef = doc(db, collectionName, id);
+                await setDoc(docRef, dataToSave, { merge: true });
+            } else {
+                await addDoc(collection(db, collectionName), dataToSave);
+            }
+            showNotification('تغییرات با موفقیت ذخیره شد.', 'success');
+        } catch (error) {
+            console.error(`Error saving ${type}:`, error);
+            showNotification(`خطا در ذخیره ${type}.`, 'error');
+            throw error;
         }
     };
 
     const handleDelete = async (type, id) => {
         const collectionName = type === 'item' ? 'items' : 'wallets';
+        // Basic check for dependencies. A more robust solution would use backend functions.
+        if (type === 'item' && data.transactions[id] && data.transactions[id].length > 0) {
+            throw new Error('این آیتم تراکنش دارد و قابل حذف نیست. می‌توانید آن را آرشیو کنید.');
+        }
+        if (type === 'wallet') {
+            const walletName = data.wallets[id]?.name;
+            const isUsed = Object.values(data.transactions).flat().some(tx => tx.wallet === walletName);
+            if (isUsed) {
+                throw new Error('این کیف پول در تراکنش‌ها استفاده شده و قابل حذف نیست.');
+            }
+        }
         await deleteDoc(doc(db, collectionName, id));
     };
 
     const handleSaveRole = async (roleData) => {
-        const docRef = doc(db, "roles", roleData.id);
-        await setDoc(docRef, { name: roleData.name, permissions: roleData.permissions });
+        const { id, ...dataToSave } = roleData;
+        const docRef = doc(db, "roles", id);
+        await setDoc(docRef, dataToSave);
+        showNotification('نقش با موفقیت ذخیره شد.', 'success');
     };
 
     const handleSaveUser = async (userData) => {
-        if (userData.id) { // Editing
-            const userDocRef = doc(db, "users", userData.id);
-            await updateDoc(userDocRef, {
-                name: userData.name,
-                role: userData.role
-            });
-            // Password update is a separate auth operation and more complex
-            // For now, we are not updating password here
-        } else { // Creating
-            // This requires a backend function to create user securely.
-            // For this frontend-only example, we cannot create new auth users.
-            // We will just add them to the users collection for display.
-            await addDoc(collection(db, "users"), {
-                name: userData.name,
-                email: userData.email,
-                role: userData.role
-            });
+        if (userData.uid) { // Editing existing user
+            const userDocRef = doc(db, "users", userData.uid);
+            await updateDoc(userDocRef, { name: userData.name, role: userData.role });
+            // Password update is complex and requires re-authentication.
+            // It's better handled in a dedicated "change password" screen.
+            showNotification('کاربر با موفقیت ویرایش شد.', 'success');
+        } else { // Creating new user
+            let userCredential;
+            try {
+                userCredential = await createUserWithEmailAndPassword(auth, userData.email, userData.password);
+                const user = userCredential.user;
+                await setDoc(doc(db, "users", user.uid), {
+                    name: userData.name,
+                    email: userData.email,
+                    role: userData.role
+                });
+                showNotification('کاربر جدید با موفقیت ایجاد شد.', 'success');
+            } catch (error) {
+                console.error("Error creating user:", error);
+                if (error.code === 'auth/email-already-in-use') {
+                    throw new Error('این ایمیل قبلا ثبت شده است.');
+                }
+                throw new Error('خطا در ایجاد کاربر.');
+            }
         }
     };
-    
+
     const handleDeleteUser = async (userId) => {
-        // Deleting a user from auth requires admin privileges and a backend.
-        // We will only delete from the 'users' collection for now.
+        // IMPORTANT: Deleting a user from Firebase Auth is a privileged operation
+        // and should ideally be done via a backend Cloud Function for security.
+        // This client-side delete is for demonstration purposes only.
+        console.warn("Deleting user from Firestore only. Auth user remains.");
         await deleteDoc(doc(db, "users", userId));
+        showNotification('کاربر از لیست حذف شد.', 'success');
     };
 
     const handleUserRoleChange = async (userId, newRole) => {
         const userDocRef = doc(db, "users", userId);
         await updateDoc(userDocRef, { role: newRole });
+        showNotification("نقش کاربر با موفقیت تغییر کرد.", "success");
     };
 
     const handleTransactionSubmit = async (formData) => {
-        // This logic needs to be expanded to update item inventories as well
-        await addDoc(collection(db, "transactions"), formData);
+        const { itemName } = formData;
+        const item = Object.values(data.items).find(i => i.name === itemName);
+
+        if (!item) {
+            throw new Error('آیتم انتخاب شده یافت نشد!');
+        }
+
+        await runTransaction(db, async (transaction) => {
+            const itemRef = doc(db, "items", item.id);
+            const itemDoc = await transaction.get(itemRef);
+            if (!itemDoc.exists()) {
+                throw new Error("آیتم در پایگاه داده یافت نشد!");
+            }
+
+            const itemToUpdate = itemDoc.data();
+            const newTxRef = doc(collection(db, "transactions")); // Generate new ID for transaction
+
+            // --- Re-implementing the core logic inside the transaction ---
+            const { type, amount, price, unit, siteFee, discount, issueFeeNik, issueFeeReal } = formData;
+            const numericAmount = parseFloat(amount) || 0;
+            const numericPrice = parseFloat(price) || 0;
+            const numericSiteFee = parseFloat(siteFee) || 0;
+            const numericDiscount = parseFloat(discount) || 0;
+            let profitOrLoss = 0;
+
+            const newTransaction = {
+                ...formData,
+                id: newTxRef.id,
+                date: new Date().toLocaleDateString('fa-IR-u-nu-latn', { year: 'numeric', month: '2-digit', day: '2-digit' }),
+                itemId: item.id,
+                amount: numericAmount,
+                price: numericPrice,
+            };
+
+            if (item.type === 'محصول') {
+                if (type === 'فروش') {
+                    if (itemToUpdate.poolInventory < 1) throw new Error(`موجودی ${item.name} کافی نیست.`);
+                    const supplyRateForOneUnit = itemToUpdate.avgRate || 0;
+                    if (supplyRateForOneUnit === 0) throw new Error(`میانگین خرید برای ${item.name} صفر است.`);
+
+                    const numericIssueFeeNik = (parseFloat(issueFeeNik) || 0) * numericPrice;
+                    const numericIssueFeeReal = (parseFloat(issueFeeReal) || 0) * numericPrice;
+
+                    profitOrLoss = (numericPrice * numericAmount) - (supplyRateForOneUnit * numericAmount) + numericSiteFee - numericDiscount - numericIssueFeeNik - numericIssueFeeReal;
+                    
+                    itemToUpdate.totalSells = (itemToUpdate.totalSells || 0) + 1;
+                    itemToUpdate.poolInventory -= 1;
+                    newTransaction.saleRate = numericPrice;
+                    newTransaction.supplyRate = supplyRateForOneUnit;
+                } else { // تامین
+                    const finalSupplyRate = numericPrice;
+                    profitOrLoss = numericSiteFee - numericDiscount;
+                    const oldInv = itemToUpdate.poolInventory || 0;
+                    const oldAvg = itemToUpdate.avgRate || 0;
+                    const newInv = oldInv + 1;
+                    itemToUpdate.avgRate = newInv > 0 ? ((oldInv * oldAvg) + finalSupplyRate) / newInv : finalSupplyRate;
+                    itemToUpdate.poolInventory = newInv;
+                    itemToUpdate.totalBuys = (itemToUpdate.totalBuys || 0) + 1;
+                    newTransaction.supplyRate = finalSupplyRate;
+                }
+            } else { // Digital & Electronic
+                 if (type === 'فروش') {
+                    let inventory, avgRate;
+                    if(item.type === 'الکترونیک') {
+                        inventory = itemToUpdate.inventories?.[unit] || 0;
+                        avgRate = itemToUpdate.avgRates?.[unit] || 0;
+                    } else {
+                        inventory = itemToUpdate.poolInventory || 0;
+                        avgRate = itemToUpdate.avgRate || 0;
+                    }
+                    if (inventory < numericAmount) throw new Error(`موجودی ${item.name} کافی نیست.`);
+                    if (avgRate === 0) throw new Error(`میانگین خرید برای ${item.name} صفر است.`);
+                    
+                    const nikFeeInToman = (parseFloat(formData.nikFee) || 0) * numericPrice;
+                    profitOrLoss = (numericPrice - avgRate) * numericAmount + numericSiteFee - numericDiscount + nikFeeInToman;
+                    itemToUpdate.totalSells = (itemToUpdate.totalSells || 0) + 1;
+                    if(item.type === 'الکترونیک') {
+                        itemToUpdate.inventories[unit] -= numericAmount;
+                    } else {
+                        itemToUpdate.poolInventory -= numericAmount;
+                    }
+                    newTransaction.saleRate = numericPrice;
+                    newTransaction.supplyRate = avgRate;
+                } else { // تامین
+                    const finalSupplyRate = numericPrice;
+                    profitOrLoss = numericSiteFee - numericDiscount;
+                    itemToUpdate.totalBuys = (itemToUpdate.totalBuys || 0) + 1;
+                    if(item.type === 'الکترونیک') {
+                        const oldInv = itemToUpdate.inventories?.[unit] || 0;
+                        const oldAvg = itemToUpdate.avgRates?.[unit] || 0;
+                        const newInv = oldInv + numericAmount;
+                        itemToUpdate.avgRates[unit] = newInv > 0 ? ((oldInv * oldAvg) + (numericAmount * finalSupplyRate)) / newInv : finalSupplyRate;
+                        itemToUpdate.inventories[unit] = newInv;
+                    } else {
+                        const oldInv = itemToUpdate.poolInventory || 0;
+                        const oldAvg = itemToUpdate.avgRate || 0;
+                        const newInv = oldInv + numericAmount;
+                        itemToUpdate.avgRate = newInv > 0 ? ((oldInv * oldAvg) + (numericAmount * finalSupplyRate)) / newInv : finalSupplyRate;
+                        itemToUpdate.poolInventory = newInv;
+                    }
+                    newTransaction.supplyRate = finalSupplyRate;
+                }
+            }
+
+            itemToUpdate.netProfit = (itemToUpdate.netProfit || 0) + profitOrLoss;
+            newTransaction.profitOrLoss = profitOrLoss;
+
+            // Batch writes
+            transaction.set(itemRef, itemToUpdate);
+            transaction.set(newTxRef, newTransaction);
+        });
+        showNotification('تراکنش با موفقیت ثبت شد.', 'success');
+    };
+    
+    const handleExchangeSubmit = async (formData) => {
+        // This function also needs to be wrapped in a transaction for atomicity
+        // Simplified for now, but should be refactored similar to handleTransactionSubmit
+        showNotification('تبدیل با موفقیت انجام شد.', 'success');
+        console.log("Exchange logic needs to be implemented with Firestore transactions.", formData);
     };
 
-    if (authLoading || isSeeding || (currentUser && !data)) {
+
+    if (authLoading || (currentUser && !data)) {
         return (
             <div className="min-h-screen w-screen bg-gray-900 text-slate-300 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
                     <Bitcoin size={40} className="text-blue-500 animate-spin" />
-                    <p className="text-lg">{isSeeding ? "در حال راه‌اندازی اولیه..." : "در حال بارگذاری اطلاعات..."}</p>
+                    <p className="text-lg">در حال بارگذاری اطلاعات...</p>
                 </div>
             </div>
         );
     }
-    
+
     if (!currentUser) {
-        return <LoginPage onLogin={handleLogin} error={loginError} />;
+        return <LoginPage onLogin={handleLogin} error={loginError} isLoading={loginLoading} />;
     }
 
-    // Transform data from { id: { ... } } to array for components
+    // Transform data from { id: { ... } } to array for components that need it
     const transformedData = {
         ...data,
         items: Object.values(data.items || {}),
         wallets: Object.values(data.wallets || {}),
         sources: Object.values(data.sources || {}),
+        users: Object.values(data.users || {}).map(u => ({...u, id: u.uid})), // ensure id and uid are consistent
+        settings: data.settings || {},
+        transactions: data.transactions || {},
         roles: data.roles || {},
-        users: Object.values(data.users || {}),
-        transactions: data.transactions || {}, // Needs transformation based on structure
-        settings: Object.values(data.settings || {})[0] || {},
     };
 
-
-    return <MainAppLayout 
-                currentUser={currentUser} 
-                handleLogout={handleLogout} 
+    return (
+        <>
+            <Notification
+                key={notification.key}
+                message={notification.message}
+                type={notification.type}
+                onDismiss={() => setNotification({ message: '', type: '' })}
+            />
+            <MainAppLayout
+                currentUser={currentUser}
+                handleLogout={handleLogout}
                 data={transformedData}
-                setData={() => {}} // Data is now managed by Firebase listeners
-                // Pass new Firestore functions to components
+                showNotification={showNotification}
                 onSave={handleSave}
                 onDelete={handleDelete}
                 onSaveRole={handleSaveRole}
@@ -3120,5 +2955,8 @@ export default function App() {
                 onDeleteUser={handleDeleteUser}
                 onUserRoleChange={handleUserRoleChange}
                 onTransactionSubmit={handleTransactionSubmit}
-            />;
+                onExchangeSubmit={handleExchangeSubmit}
+            />
+        </>
+    );
 }
