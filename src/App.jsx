@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { ChevronLeft, LayoutDashboard, Bitcoin, DollarSign, Wallet, Building, Settings, PlusCircle, FileDown, Edit, Trash2, TrendingUp, Calendar, PieChart as PieChartIcon, X, Droplets, BookCopy, Search, BarChart3, Gift, Type, Package, ListPlus, HelpCircle, Menu, BookKey, FileSignature, Library, Users, RefreshCw, Archive, Activity, ShoppingCart, Repeat, FileText, Briefcase, Users2, ChevronsLeft, ChevronsRight, ShieldOff, ArrowRightLeft, LogOut, Eye, EyeOff, Sheet } from 'lucide-react';
-// import gapi from 'gapi-script'; // This package is removed to fix the build error.
 
 // Firebase Imports
 import { initializeApp, deleteApp } from "firebase/app";
@@ -793,44 +792,46 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
         }
     };
 
-    const handleImportFromSheet = () => {
-        if (!window.gapi || !window.gapi.auth2) {
-            showNotification('Google API هنوز بارگذاری نشده است. لطفا چند لحظه صبر کرده و دوباره تلاش کنید.', 'error');
-            return;
-        }
-        window.gapi.auth2.getAuthInstance().signIn()
-            .then(() => {
-                const SPREADSHEET_ID = '16tcx7eRuVLgK3sEnIzTB-FLsnoMrIInDnEGCnJbMmso'; // شناسه شیت شما
-                const RANGE = 'Sheet1!A2:E2'; // محدوده مورد نظر (مثال: ردیف دوم از شیت اول)
-
-                window.gapi.client.sheets.spreadsheets.values.get({
-                    spreadsheetId: SPREADSHEET_ID,
-                    range: RANGE,
-                }).then((response) => {
-                    const values = response.result.values;
-                    if (values && values.length > 0) {
-                        const row = values[0];
-                        const importedData = {
-                            itemName: row[0] || '',
-                            amount: row[1] || '',
-                            price: row[2] || '',
-                            unit: row[3] || '',
-                            wallet: row[4] || '',
-                        };
-                        setForm(prevForm => ({ ...prevForm, ...importedData }));
-                        showNotification('اطلاعات از شیت با موفقیت بارگذاری شد.', 'success');
-                    } else {
-                        showNotification('هیچ داده‌ای در محدوده مشخص شده یافت نشد.', 'error');
-                    }
-                }).catch(err => {
-                    console.error("Error fetching sheet data: ", err);
-                    showNotification('خطا در خواندن اطلاعات از شیت.', 'error');
-                });
-            })
-            .catch(err => {
-                 console.error("Error signing in: ", err);
-                 showNotification('خطا در احراز هویت گوگل.', 'error');
+    const handleImportFromSheet = async () => {
+        try {
+            if (!window.gapi || !window.gapi.auth2 || !window.gapi.client) {
+                showNotification('Google API هنوز بارگذاری نشده است. لطفا چند لحظه صبر کرده و دوباره تلاش کنید.', 'error');
+                return;
+            }
+    
+            const authInstance = window.gapi.auth2.getAuthInstance();
+            if (!authInstance.isSignedIn.get()) {
+                await authInstance.signIn();
+            }
+    
+            const SPREADSHEET_ID = '16tcx7eRuVLgK3sEnIzTB-FLsnoMrIInDnEGCnJbMmso';
+            const RANGE = 'Sheet1!A2:E2';
+    
+            const response = await window.gapi.client.sheets.spreadsheets.values.get({
+                spreadsheetId: SPREADSHEET_ID,
+                range: RANGE,
             });
+    
+            const values = response.result.values;
+            if (values && values.length > 0) {
+                const row = values[0];
+                const importedData = {
+                    itemName: row[0] || '',
+                    amount: row[1] || '',
+                    price: row[2] || '',
+                    unit: row[3] || '',
+                    wallet: row[4] || '',
+                };
+                setForm(prevForm => ({ ...prevForm, ...importedData }));
+                showNotification('اطلاعات از شیت با موفقیت بارگذاری شد.', 'success');
+            } else {
+                showNotification('هیچ داده‌ای در محدوده مشخص شده یافت نشد.', 'error');
+            }
+        } catch (err) {
+            console.error("Error during Google Sheet import:", err);
+            const errorMessage = err.details || err.message || 'خطا در احراز هویت یا خواندن اطلاعات.';
+            showNotification(errorMessage, 'error');
+        }
     };
 
     const isSale = form.type === 'فروش';
