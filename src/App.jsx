@@ -2934,7 +2934,8 @@ export default function App() {
     };
 
 
-    if (authLoading || (currentUser && (!data || !data.roles || !data.users || !data.items))) {
+    // **FIX**: More robust loading condition
+    if (authLoading || (currentUser && (!data || !data.roles || !data.users || !data.items || !data.wallets || !data.sources || !data.settings || !data.transactions))) {
         return (
             <div className="min-h-screen w-screen bg-gray-900 text-slate-300 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
@@ -2979,7 +2980,7 @@ export default function App() {
                 onSaveRole={handleSaveRole}
                 onSaveUser={handleSaveUser}
                 onDeleteUser={handleDeleteUser}
-                onUserRoleChange={onUserRoleChange}
+                onUserRoleChange={handleUserRoleChange}
                 onTransactionSubmit={handleTransactionSubmit}
                 onExchangeSubmit={handleExchangeSubmit}
             />
