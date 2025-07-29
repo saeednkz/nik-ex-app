@@ -1,6 +1,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { ChevronLeft, LayoutDashboard, Bitcoin, DollarSign, Wallet, Building, Settings, PlusCircle, FileDown, Edit, Trash2, TrendingUp, Calendar, PieChart as PieChartIcon, X, Droplets, BookCopy, Search, BarChart3, Gift, Type, Package, ListPlus, HelpCircle, Menu, BookKey, FileSignature, Library, Users, RefreshCw, Archive, Activity, ShoppingCart, Repeat, FileText, Briefcase, Users2, ChevronsLeft, ChevronsRight, ShieldOff, ArrowRightLeft, LogOut, Eye, EyeOff, Sheet } from 'lucide-react';
+// import gapi from 'gapi-script'; // This package is removed to fix the build error.
 
 // Firebase Imports
 import { initializeApp, deleteApp } from "firebase/app";
@@ -41,6 +42,13 @@ const firebaseConfig = {
     appId: "1:420331427979:web:c03c2ceaa8eae992a61c8e"
 };
 // ====================================================================================
+// =========================== GOOGLE API CONFIGURATION ===============================
+// ====================================================================================
+const GOOGLE_API_KEY = "db3264d67ed0433156b1d7c47bd3127c0c3df163"; 
+const GOOGLE_CLIENT_ID = "522998435883-l0e2572a14go0vm4l2clhu8hc99o9n74.apps.googleusercontent.com"; 
+const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
+const SCOPES = "https://www.googleapis.com/auth/spreadsheets.readonly";
+// ====================================================================================
 
 
 // Initialize Firebase
@@ -76,8 +84,6 @@ const getPersianMonthDateRange = () => {
     if (monthInt > 6 && monthInt < 12) {
         lastDay = '30';
     } else if (monthInt === 12) {
-        // Note: This doesn't account for leap years in the Persian calendar.
-        // For simplicity, we'll use 29. A more robust solution would use a library.
         lastDay = '29';
     }
     const endDate = `${year}/${month}/${lastDay}`;
@@ -87,7 +93,6 @@ const getPersianMonthDateRange = () => {
 
 const CHART_COLORS = ['#3b82f6', '#8b5cf6', '#14b8a6', '#f97316', '#ec4899', '#f59e0b', '#10b981'];
 
-// UPDATED: 'sheets-import' has been removed.
 const ALL_PAGES = [
     { id: 'dashboard', label: 'داشبورد' },
     { id: 'new-transaction', label: 'صرافی' },
@@ -151,7 +156,6 @@ const Notification = ({ message, type, onDismiss }) => {
             setVisible(true);
             const timer = setTimeout(() => {
                 setVisible(false);
-                // Allow time for fade-out animation before calling onDismiss
                 setTimeout(onDismiss, 300);
             }, 4000);
             return () => clearTimeout(timer);
@@ -691,14 +695,13 @@ const FullTransactionsTable = ({ transactions, showCurrencyName = false, onShowD
     </div>
 );
 
-// UPDATED: Added handleImportFromSheet and the new button
 const TransactionForm = ({ onTransactionSubmit, showNotification, settings, customerBalances, wallets, items, permissions }) => {
     const initialFormState = {
         type: 'فروش',
         itemName: '',
         itemType: 'دیجیتال',
-        amount: '', // For digital/e-currency: value. For product: value (e.g., 100 for a $100 card). Quantity is assumed 1.
-        price: '', // For digital/e-currency: rate. For product sale: rate per currency unit. For product buy: calculated total cost.
+        amount: '',
+        price: '',
         unit: '',
         wallet: '',
         customerId: '',
@@ -709,21 +712,16 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
         networkFee: '',
         txHash: '',
         sourceWallet: '',
-        // Product specific fields
-        productUnit: 'USD', // e.g., USD, EUR
-        baseCurrencyItemId: '', // e.g., 'tether' or 'visa-electronic'
-        issueFeeNik: '', // هزینه صدور نیک
-        issueFeeReal: '', // هزینه صدور واقعی
+        productUnit: 'USD',
+        baseCurrencyItemId: '',
+        issueFeeNik: '',
+        issueFeeReal: '',
     };
     const [form, setForm] = useState(initialFormState);
     const [customerCredit, setCustomerCredit] = useState(0);
     const [filteredItems, setFilteredItems] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const canEdit = permissions === 'edit';
-
-    const baseCurrencyItems = useMemo(() =>
-        Object.values(items).filter(item => item.type === 'دیجیتال' || item.type === 'الکترونیک'),
-    [items]);
 
     useEffect(() => {
         if (form.customerId) {
@@ -734,7 +732,6 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
     }, [form.customerId, customerBalances]);
 
     useEffect(() => {
-        // Reset fields when type changes
         const selectedItem = Object.values(items).find(i => i.name === form.itemName);
         setForm(f => ({
             ...initialFormState,
@@ -744,7 +741,6 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
             unit: selectedItem?.symbol || '',
         }));
     }, [form.itemType]);
-
 
     const suitableWallets = useMemo(() => {
         return wallets.filter(w => w.type === form.itemType || (form.itemType === 'محصول' && w.type === 'الکترونیک'));
@@ -770,7 +766,6 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
         setFilteredItems([]);
     };
 
-
     const handleChange = (e) => {
         const { name, value } = e.target;
         setForm(prev => ({ ...prev, [name]: value }));
@@ -778,22 +773,14 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-
-        if (!form.itemName.trim() || !form.amount) {
-            showNotification('لطفا نام آیتم و مقدار را پر کنید.', 'error');
+        if (!form.itemName.trim() || !form.amount || !form.price) {
+            showNotification('لطفا فیلدهای ستاره‌دار را پر کنید.', 'error');
             return;
         }
-
-        if (!form.price) {
-             showNotification('لطفا قیمت/نرخ را وارد کنید.', 'error');
-            return;
-        }
-
         if (form.type === 'فروش' && !form.customerId) {
             showNotification('برای فروش، شناسه مشتری الزامی است.', 'error');
             return;
         }
-
         setIsLoading(true);
         try {
             await onTransactionSubmit(form);
@@ -807,23 +794,43 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
     };
 
     const handleImportFromSheet = () => {
-        // This is the placeholder for Google Sheets API logic.
-        // You would use gapi-script here to sign in and fetch data.
-        showNotification('این قابلیت هنوز پیاده‌سازی نشده است.', 'error');
-        console.log("Google Sheets import button clicked. Implement API logic here.");
-        
-        // Example of how you might update the form:
-        /*
-        const importedData = {
-            itemName: 'Bitcoin',
-            amount: '0.5',
-            price: '65000',
-            unit: 'BTC',
-            wallet: 'Wallet A',
-        };
-        setForm(prevForm => ({ ...prevForm, ...importedData }));
-        showNotification('Data loaded successfully (example).', 'success');
-        */
+        if (!window.gapi || !window.gapi.auth2) {
+            showNotification('Google API هنوز بارگذاری نشده است. لطفا چند لحظه صبر کرده و دوباره تلاش کنید.', 'error');
+            return;
+        }
+        window.gapi.auth2.getAuthInstance().signIn()
+            .then(() => {
+                const SPREADSHEET_ID = '16tcx7eRuVLgK3sEnIzTB-FLsnoMrIInDnEGCnJbMmso'; // شناسه شیت شما
+                const RANGE = 'Sheet1!A2:E2'; // محدوده مورد نظر (مثال: ردیف دوم از شیت اول)
+
+                window.gapi.client.sheets.spreadsheets.values.get({
+                    spreadsheetId: SPREADSHEET_ID,
+                    range: RANGE,
+                }).then((response) => {
+                    const values = response.result.values;
+                    if (values && values.length > 0) {
+                        const row = values[0];
+                        const importedData = {
+                            itemName: row[0] || '',
+                            amount: row[1] || '',
+                            price: row[2] || '',
+                            unit: row[3] || '',
+                            wallet: row[4] || '',
+                        };
+                        setForm(prevForm => ({ ...prevForm, ...importedData }));
+                        showNotification('اطلاعات از شیت با موفقیت بارگذاری شد.', 'success');
+                    } else {
+                        showNotification('هیچ داده‌ای در محدوده مشخص شده یافت نشد.', 'error');
+                    }
+                }).catch(err => {
+                    console.error("Error fetching sheet data: ", err);
+                    showNotification('خطا در خواندن اطلاعات از شیت.', 'error');
+                });
+            })
+            .catch(err => {
+                 console.error("Error signing in: ", err);
+                 showNotification('خطا در احراز هویت گوگل.', 'error');
+            });
     };
 
     const isSale = form.type === 'فروش';
@@ -831,7 +838,6 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
 
     return (
         <form onSubmit={handleSubmit} className="space-y-6 text-slate-300">
-            {/* --- Row 1: Basic Info --- */}
             <div className="flex flex-wrap gap-4">
                 <div className="flex-1 min-w-[180px]">
                     <StyledSelect name="type" value={form.type} onChange={handleChange}>
@@ -910,7 +916,7 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
                                 </div>
                             </div>
                         </div>
-                    ) : ( // Buy
+                    ) : (
                         <div className="p-4 bg-slate-800/50 rounded-lg">
                              <label className="block text-sm font-medium text-slate-400 mb-1">هزینه تمام شده تامین</label>
                             <StyledInput type="number" step="any" name="price" value={form.price} onChange={handleChange} placeholder="* هزینه کل تامین یک واحد (به تومان)" required />
@@ -953,7 +959,6 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
                     </div>
                 </>
             )}
-
 
             <div className="flex justify-between items-center pt-4 border-t border-slate-700">
                 <StyledButton
@@ -2346,9 +2351,6 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
 
     const userRole = data.roles && data.roles[currentUser.role];
     if (!userRole) {
-        // This can happen if roles haven't loaded yet, or the user has an invalid role.
-        // The main App component's loading state should prevent this for the initial load.
-        // If it still happens, it's likely an invalid role.
         return (
             <div className="min-h-screen w-screen bg-gray-900 text-slate-300 flex items-center justify-center p-4">
                 <div className="text-center bg-slate-800/60 p-8 rounded-2xl shadow-lg border border-slate-700/80">
@@ -2682,8 +2684,31 @@ export default function App() {
         setNotification({ message, type, key: Date.now() });
     };
 
-    // --- Dynamic Style and Font Loader ---
+    // --- Google API and Style/Font Loader ---
     useEffect(() => {
+        // Load Google API Client
+        const startGapi = () => {
+             window.gapi.client.init({
+                apiKey: GOOGLE_API_KEY,
+                clientId: GOOGLE_CLIENT_ID,
+                discoveryDocs: DISCOVERY_DOCS,
+                scope: SCOPES,
+            });
+        };
+        
+        const script = document.createElement("script");
+        script.src = "https://apis.google.com/js/api.js";
+        script.id = "google-api-script";
+        script.onload = () => {
+            window.gapi.load('client:auth2', startGapi);
+        };
+        
+        if (!document.getElementById("google-api-script")) {
+            document.body.appendChild(script);
+        }
+
+
+        // Load Tailwind CSS
         const tailwindScriptId = 'tailwind-script';
         if (!document.getElementById(tailwindScriptId)) {
             const script = document.createElement('script');
@@ -2692,6 +2717,7 @@ export default function App() {
             document.head.appendChild(script);
         }
 
+        // Load Font
         const fontLinkId = 'inter-font-link';
         if (!document.getElementById(fontLinkId)) {
             const fontLink = document.createElement('link');
@@ -2701,29 +2727,22 @@ export default function App() {
             document.head.appendChild(fontLink);
         }
 
+        // Custom Styles
         const customStylesId = 'custom-styles';
         if (!document.getElementById(customStylesId)) {
             const style = document.createElement('style');
             style.id = customStylesId;
             style.innerHTML = `
-                body {
-                    font-family: 'Inter', sans-serif;
-                    background-color: #111827; /* Tailwind's gray-900 */
-                }
+                body { font-family: 'Inter', sans-serif; background-color: #111827; }
                 .custom-scrollbar::-webkit-scrollbar { width: 8px; height: 8px; }
                 .custom-scrollbar::-webkit-scrollbar-track { background: rgba(30, 41, 59, 0.5); border-radius: 10px; }
                 .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(71, 85, 105, 0.7); border-radius: 10px; }
                 .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 139, 0.7); }
-                @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-                .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
-                @keyframes scale-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-                .animate-scale-in { animation: scale-in 0.3s ease-out forwards; }
-                @keyframes slide-down { from { transform: translateY(-100%) translateX(-50%); opacity: 0; } to { transform: translateY(0) translateX(-50%); opacity: 1; } }
-                .animate-slide-down { animation: slide-down 0.5s ease-out forwards; }
-                @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
-                .animate-shake { animation: shake 0.3s ease-in-out; }
-                @keyframes fade-in-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-                .animate-fade-in-up { animation: fade-in-up 0.5s ease-out forwards; }
+                @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } } .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+                @keyframes scale-in { from { transform: scale(0.95); opacity: 0; } to { transform: scale(1); opacity: 1; } } .animate-scale-in { animation: scale-in 0.3s ease-out forwards; }
+                @keyframes slide-down { from { transform: translateY(-100%) translateX(-50%); opacity: 0; } to { transform: translateY(0) translateX(-50%); opacity: 1; } } .animate-slide-down { animation: slide-down 0.5s ease-out forwards; }
+                @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } } .animate-shake { animation: shake 0.3s ease-in-out; }
+                @keyframes fade-in-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } } .animate-fade-in-up { animation: fade-in-up 0.5s ease-out forwards; }
             `;
             document.head.appendChild(style);
         }
@@ -2770,13 +2789,12 @@ export default function App() {
             return onSnapshot(q, (querySnapshot) => {
                 const isDoc = collectionName === 'settings';
                 if (isDoc) {
-                    // Settings is a single document, not a collection
                     const settingsData = querySnapshot.docs[0] ? { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } : {};
                      setData(prev => ({ ...prev, [stateKey]: settingsData }));
                 } else {
                     const collectionData = {};
                     querySnapshot.forEach((doc) => {
-                        collectionData[doc.id] = { ...doc.data(), id: doc.id, uid: doc.id }; // Add uid for users
+                        collectionData[doc.id] = { ...doc.data(), id: doc.id, uid: doc.id };
                     });
                     setData(prev => ({ ...prev, [stateKey]: collectionData }));
                 }
@@ -2844,7 +2862,6 @@ export default function App() {
             throw new Error(`Invalid delete type: ${type}`);
         }
 
-        // Basic check for dependencies. A more robust solution would use backend functions.
         if (type === 'item' && data.transactions[id] && data.transactions[id].length > 0) {
             throw new Error('این آیتم تراکنش دارد و قابل حذف نیست. می‌توانید آن را آرشیو کنید.');
         }
@@ -2856,8 +2873,6 @@ export default function App() {
             }
         }
         if (type === 'source') {
-             // NOTE: The current data model does not link transactions to sources,
-             // so a dependency check is not possible here.
              console.warn("Dependency check for sources not implemented.");
         }
         await deleteDoc(doc(db, collectionName, id));
@@ -2871,26 +2886,19 @@ export default function App() {
     };
 
     const handleSaveUser = async (userData) => {
-        // This function now correctly handles user creation without logging the admin out.
-        if (userData.uid) { // Editing existing user
+        if (userData.uid) {
             const userDocRef = doc(db, "users", userData.uid);
             await updateDoc(userDocRef, { name: userData.name, role: userData.role });
-            // Password update is complex and requires re-authentication.
-            // It's better handled in a dedicated "change password" screen.
             showNotification('کاربر با موفقیت ویرایش شد.', 'success');
-        } else { // Creating new user
-            // 1. Create a temporary, secondary Firebase app instance.
+        } else {
             const tempAppName = `temp-app-${Date.now()}`;
             const tempApp = initializeApp(firebaseConfig, tempAppName);
             const tempAuth = getAuth(tempApp);
 
             try {
-                // 2. Use the temporary auth instance to create the user.
-                // This will not affect the main app's authentication state.
                 const userCredential = await createUserWithEmailAndPassword(tempAuth, userData.email, userData.password);
                 const user = userCredential.user;
 
-                // 3. Save the user's details to Firestore using the main db instance.
                 await setDoc(doc(db, "users", user.uid), {
                     name: userData.name,
                     email: userData.email,
@@ -2905,16 +2913,12 @@ export default function App() {
                 }
                 throw new Error('خطا در ایجاد کاربر.');
             } finally {
-                // 4. Clean up and delete the temporary app instance.
                 await deleteApp(tempApp);
             }
         }
     };
 
     const handleDeleteUser = async (userId) => {
-        // IMPORTANT: Deleting a user from Firebase Auth is a privileged operation
-        // and should ideally be done via a backend Cloud Function for security.
-        // This client-side delete is for demonstration purposes only.
         console.warn("Deleting user from Firestore only. Auth user remains.");
         await deleteDoc(doc(db, "users", userId));
         showNotification('کاربر از لیست حذف شد.', 'success');
@@ -2942,9 +2946,8 @@ export default function App() {
             }
 
             const itemToUpdate = itemDoc.data();
-            const newTxRef = doc(collection(db, "transactions")); // Generate new ID for transaction
+            const newTxRef = doc(collection(db, "transactions"));
 
-            // --- Re-implementing the core logic inside the transaction ---
             const { type, amount, price, unit, siteFee, discount, issueFeeNik, issueFeeReal } = formData;
             const numericAmount = parseFloat(amount) || 0;
             const numericPrice = parseFloat(price) || 0;
@@ -2976,7 +2979,7 @@ export default function App() {
                     itemToUpdate.poolInventory -= 1;
                     newTransaction.saleRate = numericPrice;
                     newTransaction.supplyRate = supplyRateForOneUnit;
-                } else { // تامین
+                } else {
                     const finalSupplyRate = numericPrice;
                     profitOrLoss = numericSiteFee - numericDiscount;
                     const oldInv = itemToUpdate.poolInventory || 0;
@@ -2987,7 +2990,7 @@ export default function App() {
                     itemToUpdate.totalBuys = (itemToUpdate.totalBuys || 0) + 1;
                     newTransaction.supplyRate = finalSupplyRate;
                 }
-            } else { // Digital & Electronic
+            } else {
                  if (type === 'فروش') {
                     let inventory, avgRate;
                     if(item.type === 'الکترونیک') {
@@ -3010,7 +3013,7 @@ export default function App() {
                     }
                     newTransaction.saleRate = numericPrice;
                     newTransaction.supplyRate = avgRate;
-                } else { // تامین
+                } else {
                     const finalSupplyRate = numericPrice;
                     profitOrLoss = numericSiteFee - numericDiscount;
                     itemToUpdate.totalBuys = (itemToUpdate.totalBuys || 0) + 1;
@@ -3034,7 +3037,6 @@ export default function App() {
             itemToUpdate.netProfit = (itemToUpdate.netProfit || 0) + profitOrLoss;
             newTransaction.profitOrLoss = profitOrLoss;
 
-            // Batch writes
             transaction.set(itemRef, itemToUpdate);
             transaction.set(newTxRef, newTransaction);
         });
@@ -3042,14 +3044,11 @@ export default function App() {
     };
     
     const handleExchangeSubmit = async (formData) => {
-        // This function also needs to be wrapped in a transaction for atomicity
-        // Simplified for now, but should be refactored similar to handleTransactionSubmit
         showNotification('تبدیل با موفقیت انجام شد.', 'success');
         console.log("Exchange logic needs to be implemented with Firestore transactions.", formData);
     };
 
 
-    // **FIX**: More robust loading condition
     if (authLoading || (currentUser && (!data || !data.roles || !data.users || !data.items || !data.wallets || !data.sources || !data.settings || !data.transactions))) {
         return (
             <div className="min-h-screen w-screen bg-gray-900 text-slate-300 flex items-center justify-center">
@@ -3065,13 +3064,12 @@ export default function App() {
         return <LoginPage onLogin={handleLogin} error={loginError} isLoading={loginLoading} />;
     }
 
-    // Transform data from { id: { ... } } to array for components that need it
     const transformedData = {
         ...data,
         items: Object.values(data.items || {}),
         wallets: Object.values(data.wallets || {}),
         sources: Object.values(data.sources || {}),
-        users: Object.values(data.users || {}).map(u => ({...u, id: u.uid})), // ensure id and uid are consistent
+        users: Object.values(data.users || {}).map(u => ({...u, id: u.uid})),
         settings: data.settings || {},
         transactions: data.transactions || {},
         roles: data.roles || {},
