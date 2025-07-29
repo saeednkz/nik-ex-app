@@ -3,7 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsive
 import { ChevronLeft, LayoutDashboard, Bitcoin, DollarSign, Wallet, Building, Settings, PlusCircle, FileDown, Edit, Trash2, TrendingUp, Calendar, PieChart as PieChartIcon, X, Droplets, BookCopy, Search, BarChart3, Gift, Type, Package, ListPlus, HelpCircle, Menu, BookKey, FileSignature, Library, Users, RefreshCw, Archive, Activity, ShoppingCart, Repeat, FileText, Briefcase, Users2, ChevronsLeft, ChevronsRight, ShieldOff, ArrowRightLeft, LogOut, Eye, EyeOff, Sheet } from 'lucide-react';
 
 // Firebase Imports
-import { initializeApp, deleteApp } from "firebase/app"; // Import deleteApp
+import { initializeApp, deleteApp } from "firebase/app";
 import {
     getAuth,
     onAuthStateChanged,
@@ -518,6 +518,59 @@ const UserModal = ({ isOpen, onClose, onSave, initialData, roles, showNotificati
                 <div className="flex justify-end gap-3 pt-4">
                     <StyledButton onClick={onClose} variant="secondary" disabled={isLoading}>انصراف</StyledButton>
                     <StyledButton type="submit" variant="primary" isLoading={isLoading}>{isEditing ? 'ذخیره تغییرات' : 'افزودن کاربر'}</StyledButton>
+                </div>
+            </form>
+        </Modal>
+    );
+};
+
+const SourceModal = ({ isOpen, onClose, onSave, initialData }) => {
+    const [name, setName] = useState('');
+    const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
+    const isEditing = !!initialData;
+
+    useEffect(() => {
+        if (isOpen) {
+            if (isEditing && initialData) {
+                setName(initialData.name);
+            } else {
+                setName('');
+            }
+            setError('');
+            setIsLoading(false);
+        }
+    }, [initialData, isOpen, isEditing]);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!name.trim()) {
+            setError('لطفا نام تامین‌کننده را وارد کنید.');
+            return;
+        }
+        setIsLoading(true);
+        try {
+            await onSave({ id: initialData?.id, name });
+            onClose();
+        } catch (err) {
+            console.error(err);
+            setError('خطا در ذخیره‌سازی. لطفا دوباره تلاش کنید.');
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    return (
+        <Modal isOpen={isOpen} onClose={onClose} title={isEditing ? "ویرایش تامین‌کننده" : "افزودن تامین‌کننده جدید"}>
+            <form onSubmit={handleSubmit} className="space-y-4 text-slate-300">
+                {error && <p className="text-red-400 text-sm mb-3">{error}</p>}
+                <div>
+                    <label className="block text-sm font-medium text-slate-400 mb-1">نام تامین‌کننده</label>
+                    <StyledInput type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="مثلا: Binance" required />
+                </div>
+                <div className="flex justify-end gap-3 pt-4">
+                    <StyledButton onClick={onClose} variant="secondary" disabled={isLoading}>انصراف</StyledButton>
+                    <StyledButton type="submit" variant="primary" isLoading={isLoading}>{isEditing ? "ذخیره تغییرات" : "افزودن"}</StyledButton>
                 </div>
             </form>
         </Modal>
@@ -1666,7 +1719,7 @@ const ExchangePage = ({ items, onExchangeSubmit, showNotification, permissions }
                               <div>
                                  <label className="block text-sm font-medium text-slate-400 mb-1">واحد کارمزد</label>
                                  <StyledSelect name="feeUnit" value={form.feeUnit} onChange={handleChange} disabled={!form.fee}>
-                                     <option value="from">{fromItem ? `از ارز مبدا (${form.fromUnit || fromItem.symbol})` : 'از ارز مبدا'}</option>
+                                      <option value="from">{fromItem ? `از ارز مبدا (${form.fromUnit || fromItem.symbol})` : 'از ارز مبدا'}</option>
                                  </StyledSelect>
                               </div>
                          </div>
@@ -1911,6 +1964,7 @@ const ManagementPage = ({ data, onSave, onDelete, permissions, showNotification 
     const { items, wallets, sources } = data;
     const [itemModalOpen, setItemModalOpen] = useState(false);
     const [walletModalOpen, setWalletModalOpen] = useState(false);
+    const [sourceModalOpen, setSourceModalOpen] = useState(false);
     const [editingData, setEditingData] = useState(null);
     const [itemToDelete, setItemToDelete] = useState(null);
     const [isDeleting, setIsDeleting] = useState(false);
@@ -1920,12 +1974,14 @@ const ManagementPage = ({ data, onSave, onDelete, permissions, showNotification 
         setEditingData(data);
         if (type === 'item') setItemModalOpen(true);
         if (type === 'wallet') setWalletModalOpen(true);
+        if (type === 'source') setSourceModalOpen(true);
     };
 
     const handleAddNew = (type) => {
         setEditingData(null);
         if (type === 'item') setItemModalOpen(true);
         if (type === 'wallet') setWalletModalOpen(true);
+        if (type === 'source') setSourceModalOpen(true);
     };
 
     const handleDeleteClick = (type, item) => {
@@ -1974,12 +2030,18 @@ const ManagementPage = ({ data, onSave, onDelete, permissions, showNotification 
                 onSave={(data) => onSave('wallet', data)}
                 initialData={editingData}
             />
+            <SourceModal
+                isOpen={sourceModalOpen}
+                onClose={() => setSourceModalOpen(false)}
+                onSave={(data) => onSave('source', data)}
+                initialData={editingData}
+            />
             <ConfirmationModal
                 isOpen={!!itemToDelete}
                 onClose={() => setItemToDelete(null)}
                 onConfirm={confirmDelete}
                 isLoading={isDeleting}
-                title={`تایید حذف ${itemToDelete?.type === 'item' ? 'آیتم' : 'کیف پول'}`}
+                title={`تایید حذف ${itemToDelete?.type === 'item' ? 'آیتم' : itemToDelete?.type === 'wallet' ? 'کیف پول' : 'تامین‌کننده'}`}
                 message={`آیا از حذف "${itemToDelete?.item?.name}" اطمینان دارید؟ این عمل قابل بازگشت نیست.`}
             />
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -2020,15 +2082,15 @@ const ManagementPage = ({ data, onSave, onDelete, permissions, showNotification 
                 <div className="space-y-4">
                      <div className="flex justify-between items-center">
                         <h3 className="text-xl font-semibold text-slate-100">تامین کنندگان</h3>
-                        <StyledButton onClick={() => {}} variant="secondary" className="flex items-center gap-2 text-sm" disabled><PlusCircle size={16} /> افزودن</StyledButton>
+                        <StyledButton onClick={() => handleAddNew('source')} variant="secondary" className="flex items-center gap-2 text-sm" disabled={!canEdit}><PlusCircle size={16} /> افزودن</StyledButton>
                     </div>
                     <div className="space-y-2 p-4 bg-slate-800/60 rounded-2xl border border-slate-700/80 backdrop-blur-xl max-h-[60vh] overflow-y-auto custom-scrollbar">
                         {sources.map(source => (
                             <div key={source.id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-lg hover:bg-slate-800 transition-colors">
                                 <p className="font-semibold text-slate-200">{source.name}</p>
                                 <div className="flex items-center gap-2">
-                                    <button className="p-2 text-slate-500 cursor-not-allowed"><Edit size={16} /></button>
-                                    <button className="p-2 text-slate-500 cursor-not-allowed"><Trash2 size={16} /></button>
+                                    <button onClick={() => handleEdit('source', source)} className="p-2 text-slate-400 hover:text-blue-400" disabled={!canEdit}><Edit size={16} /></button>
+                                    <button onClick={() => handleDeleteClick('source', source)} className="p-2 text-slate-400 hover:text-red-400" disabled={!canEdit}><Trash2 size={16} /></button>
                                 </div>
                             </div>
                         ))}
@@ -2238,7 +2300,7 @@ const AccessManagementPage = ({ roles, users, onSaveRole, onSaveUser, onDeleteUs
                     </div>
                 </div>
             </PageWrapper>
-         </>
+           </>
     )
 }
 
@@ -2714,7 +2776,16 @@ export default function App() {
     };
 
     const handleSave = async (type, saveData) => {
-        const collectionName = type === 'item' ? 'items' : type === 'wallet' ? 'wallets' : 'settings';
+        let collectionName;
+        if (type === 'item') collectionName = 'items';
+        else if (type === 'wallet') collectionName = 'wallets';
+        else if (type === 'source') collectionName = 'sources';
+        else if (type === 'settings') collectionName = 'settings';
+        else {
+            showNotification(`نوع ذخیره نامعتبر: ${type}`, 'error');
+            throw new Error(`Invalid save type: ${type}`);
+        }
+
         const { id, ...dataToSave } = saveData;
 
         try {
@@ -2733,7 +2804,15 @@ export default function App() {
     };
 
     const handleDelete = async (type, id) => {
-        const collectionName = type === 'item' ? 'items' : 'wallets';
+        let collectionName;
+        if (type === 'item') collectionName = 'items';
+        else if (type === 'wallet') collectionName = 'wallets';
+        else if (type === 'source') collectionName = 'sources';
+        else {
+            showNotification(`نوع حذف نامعتبر: ${type}`, 'error');
+            throw new Error(`Invalid delete type: ${type}`);
+        }
+
         // Basic check for dependencies. A more robust solution would use backend functions.
         if (type === 'item' && data.transactions[id] && data.transactions[id].length > 0) {
             throw new Error('این آیتم تراکنش دارد و قابل حذف نیست. می‌توانید آن را آرشیو کنید.');
@@ -2744,6 +2823,11 @@ export default function App() {
             if (isUsed) {
                 throw new Error('این کیف پول در تراکنش‌ها استفاده شده و قابل حذف نیست.');
             }
+        }
+        if (type === 'source') {
+             // NOTE: The current data model does not link transactions to sources,
+             // so a dependency check is not possible here.
+             console.warn("Dependency check for sources not implemented.");
         }
         await deleteDoc(doc(db, collectionName, id));
     };
