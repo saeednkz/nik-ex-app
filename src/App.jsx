@@ -87,11 +87,11 @@ const getPersianMonthDateRange = () => {
 
 const CHART_COLORS = ['#3b82f6', '#8b5cf6', '#14b8a6', '#f97316', '#ec4899', '#f59e0b', '#10b981'];
 
+// UPDATED: 'sheets-import' has been removed.
 const ALL_PAGES = [
     { id: 'dashboard', label: 'داشبورد' },
     { id: 'new-transaction', label: 'صرافی' },
     { id: 'exchange', label: 'اکسچنج' },
-    { id: 'sheets-import', label: 'ورود از شیت'},
     { id: 'accounting', label: 'حسابداری' },
     { id: 'financial-report', label: 'گزارش مالی' },
     { id: 'pool-overview', label: 'نمای کلی استخرها' },
@@ -691,6 +691,7 @@ const FullTransactionsTable = ({ transactions, showCurrencyName = false, onShowD
     </div>
 );
 
+// UPDATED: Added handleImportFromSheet and the new button
 const TransactionForm = ({ onTransactionSubmit, showNotification, settings, customerBalances, wallets, items, permissions }) => {
     const initialFormState = {
         type: 'فروش',
@@ -803,6 +804,26 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
         } finally {
             setIsLoading(false);
         }
+    };
+
+    const handleImportFromSheet = () => {
+        // This is the placeholder for Google Sheets API logic.
+        // You would use gapi-script here to sign in and fetch data.
+        showNotification('این قابلیت هنوز پیاده‌سازی نشده است.', 'error');
+        console.log("Google Sheets import button clicked. Implement API logic here.");
+        
+        // Example of how you might update the form:
+        /*
+        const importedData = {
+            itemName: 'Bitcoin',
+            amount: '0.5',
+            price: '65000',
+            unit: 'BTC',
+            wallet: 'Wallet A',
+        };
+        setForm(prevForm => ({ ...prevForm, ...importedData }));
+        showNotification('Data loaded successfully (example).', 'success');
+        */
     };
 
     const isSale = form.type === 'فروش';
@@ -934,8 +955,19 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
             )}
 
 
-            <div className="flex justify-end pt-4 border-t border-slate-700">
-                <StyledButton type="submit" variant="primary" disabled={!canEdit || isLoading} isLoading={isLoading}>ثبت تراکنش</StyledButton>
+            <div className="flex justify-between items-center pt-4 border-t border-slate-700">
+                <StyledButton
+                    type="button"
+                    onClick={handleImportFromSheet}
+                    variant="secondary"
+                    disabled={!canEdit}
+                >
+                    <Sheet size={16} />
+                    وارد کردن از گوگل شیت
+                </StyledButton>
+                <StyledButton type="submit" variant="primary" disabled={!canEdit || isLoading} isLoading={isLoading}>
+                    ثبت تراکنش
+                </StyledButton>
             </div>
         </form>
     );
@@ -2442,7 +2474,6 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
             'dashboard': <LayoutDashboard size={20} />,
             'new-transaction': <ArrowRightLeft size={20} />,
             'exchange': <Repeat size={20} />,
-            'sheets-import': <Sheet size={20} />,
             'accounting': <BookKey size={20} />,
             'financial-report': <FileText size={20} />,
             'pool-overview': <Droplets size={20} />,
