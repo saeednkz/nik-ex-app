@@ -43,8 +43,8 @@ const firebaseConfig = {
 // ====================================================================================
 // =========================== GOOGLE API CONFIGURATION ===============================
 // ====================================================================================
-const GOOGLE_API_KEY = "db3264d67ed0433156b1d7c47bd3127c0c3df163"; 
-const GOOGLE_CLIENT_ID = "522998435883-rlfhmn9ira3rpas8nffr97rv15cgp3hv.apps.googleusercontent.com"; 
+const GOOGLE_API_KEY = "AIzaSyBtvPsfnNLCXEGDToRArSwIr-qfa63GuLY"; // FIXED: Using the correct API key from Firebase config
+const GOOGLE_CLIENT_ID = "522998435883-l0e2572a14go0vm4l2clhu8hc99o9n74.apps.googleusercontent.com"; 
 const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
 const SCOPES = "https://www.googleapis.com/auth/spreadsheets.readonly";
 // ====================================================================================
@@ -805,7 +805,7 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
             }
     
             const SPREADSHEET_ID = '16tcx7eRuVLgK3sEnIzTB-FLsnoMrIInDnEGCnJbMmso';
-            const RANGE = 'Sheet1!A2:E2';
+            const RANGE = 'sheet1!B2:G2'; // Corrected range to match your sheet
     
             const response = await window.gapi.client.sheets.spreadsheets.values.get({
                 spreadsheetId: SPREADSHEET_ID,
@@ -815,12 +815,14 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
             const values = response.result.values;
             if (values && values.length > 0) {
                 const row = values[0];
+                // Corrected mapping based on your sheet screenshot
                 const importedData = {
                     itemName: row[0] || '',
-                    amount: row[1] || '',
-                    price: row[2] || '',
-                    unit: row[3] || '',
+                    type: row[1] || 'فروش', // Assuming column C is transaction type
+                    amount: row[2] || '',
+                    price: row[3] || '',
                     wallet: row[4] || '',
+                    customerId: row[5] || '',
                 };
                 setForm(prevForm => ({ ...prevForm, ...importedData }));
                 showNotification('اطلاعات از شیت با موفقیت بارگذاری شد.', 'success');
@@ -828,8 +830,8 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
                 showNotification('هیچ داده‌ای در محدوده مشخص شده یافت نشد.', 'error');
             }
         } catch (err) {
-            console.error("Error during Google Sheet import:", err);
-            const errorMessage = err.details || err.message || 'خطا در احراز هویت یا خواندن اطلاعات.';
+            console.error("Full error object during Google Sheet import:", JSON.stringify(err, null, 2));
+            const errorMessage = err.result?.error?.message || err.details || 'خطا در احراز هویت یا خواندن اطلاعات.';
             showNotification(errorMessage, 'error');
         }
     };
