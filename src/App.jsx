@@ -122,7 +122,7 @@ const InfoCard = ({ title, value, icon, subValue }) => (
         <div className="flex justify-between items-start relative">
             <div className="flex-grow">
                 <p className="text-sm font-medium text-slate-400 mb-1">{title}</p>
-                <p className="text-2xl font-bold text-slate-100 break-words">{value}</p>
+                <p className="text-2xl font-bold text-slate-100 break-words whitespace-nowrap"><span>{value}</span></p>
                 {subValue && <p className="text-xs text-slate-500 mt-1 break-words">{subValue}</p>}
             </div>
             <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center rounded-xl bg-slate-700/50 border border-slate-600 text-blue-400 group-hover:bg-blue-600/20 group-hover:text-white transition-colors">
@@ -694,7 +694,7 @@ const FullTransactionsTable = ({ transactions, showCurrencyName = false, onShowD
     </div>
 );
 
-const TransactionForm = ({ onTransactionSubmit, showNotification, settings, customerBalances, wallets, items, permissions }) => {
+const TransactionForm = ({ onTransactionSubmit, showNotification, settings, customerBalances, wallets, items, permissions, isGapiReady }) => {
     const initialFormState = {
         type: 'فروش',
         itemName: '',
@@ -968,10 +968,11 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
                     type="button"
                     onClick={handleImportFromSheet}
                     variant="secondary"
-                    disabled={!canEdit}
+                    disabled={!canEdit || !isGapiReady}
+                    title={!isGapiReady ? "در حال اتصال به سرویس گوگل..." : ""}
                 >
                     <Sheet size={16} />
-                    وارد کردن از گوگل شیت
+                    {isGapiReady ? "وارد کردن از گوگل شیت" : "در حال اتصال..."}
                 </StyledButton>
                 <StyledButton type="submit" variant="primary" disabled={!canEdit || isLoading} isLoading={isLoading}>
                     ثبت تراکنش
@@ -1032,7 +1033,7 @@ const Dashboard = ({ data, onShowDetails }) => {
             return txDate >= start && txDate <= end;
         });
 
-        const totalNetProfit = filteredTx.reduce((sum, tx) => sum + (tx.profitOrLoss || 0), 0);
+        const totalNetProfit = filteredTx.reduce((sum, tx) => sum + (parseFloat(tx.profitOrLoss) || 0), 0);
 
         let buyTransactionsCount = 0;
         let sellTransactionsCount = 0;
@@ -1041,18 +1042,15 @@ const Dashboard = ({ data, onShowDetails }) => {
         const profitByCurrency = {};
 
         filteredTx.forEach(tx => {
-            // Transaction counts
             if (tx.type.startsWith('تامین')) {
                 buyTransactionsCount++;
             } else if (tx.type === 'فروش') {
                 sellTransactionsCount++;
             }
 
-            // Commission
-            totalCommission += tx.siteFee || 0;
+            totalCommission += parseFloat(tx.siteFee) || 0;
 
-            // Net Fee Profit
-            const rate = tx.price || 0;
+            const rate = parseFloat(tx.price) || 0;
             if (tx.itemType === 'محصول') {
                 const nikFee = parseFloat(tx.issueFeeNik) || 0;
                 const realFee = parseFloat(tx.issueFeeReal) || 0;
@@ -1063,13 +1061,11 @@ const Dashboard = ({ data, onShowDetails }) => {
                 totalNetFeeProfit += (nikFee - networkFee) * rate;
             }
 
-            // Profit by currency
             const name = tx.itemName || 'نامشخص';
             if (!profitByCurrency[name]) profitByCurrency[name] = 0;
-            profitByCurrency[name] += tx.profitOrLoss || 0;
+            profitByCurrency[name] += parseFloat(tx.profitOrLoss) || 0;
         });
 
-        // Most/Least Profitable
         const profitEntries = Object.entries(profitByCurrency);
         let mostProfitableItem = { name: '---', profit: -Infinity };
         let leastProfitableItem = { name: '---', profit: Infinity };
@@ -1249,7 +1245,7 @@ const Dashboard = ({ data, onShowDetails }) => {
             </div>
              <div className="mt-8 bg-slate-800/60 p-6 rounded-2xl shadow-lg border border-slate-700/80 backdrop-blur-xl">
                     <h2 className="text-xl font-semibold text-slate-100 mb-4">آخرین تراکنش‌ها (همه زمان‌ها)</h2>
-                    <TransactionsTable transactions={monthlyData.latestTransactions} showCurrencyName={true} onShowDetails={onShowDetails} />
+                    <TransactionsTable transactions={latestTransactions} showCurrencyName={true} onShowDetails={onShowDetails} />
                 </div>
         </PageWrapper>
     );
@@ -1308,18 +1304,18 @@ const FinancialReport = ({ transactions, items }) => {
                     currencyResult.units[unit] = { buyOrders: 0, sellOrders: 0, tradingProfit: 0, commissionReceived: 0, netFeeProfit: 0, totalIncome: 0, totalBuyVolume: 0, totalSellVolume: 0, totalBuyPriceAmount: 0, totalSellPriceAmount: 0 }
                 }
                 const unitResult = currencyResult.units[unit];
-                if (tx.type === 'تامین/خرید') { unitResult.buyOrders++; unitResult.totalBuyVolume += tx.amount; unitResult.totalBuyPriceAmount += tx.price * tx.amount; }
-                if (tx.type === 'فروش') { unitResult.sellOrders++; unitResult.totalSellVolume += tx.amount; unitResult.totalSellPriceAmount += tx.price * tx.amount; }
-                unitResult.commissionReceived += tx.siteFee || 0;
-                if (tx.type === 'فروش' && tx.saleRate && tx.supplyRate) { unitResult.tradingProfit += (tx.saleRate - tx.supplyRate) * tx.amount; }
+                if (tx.type === 'تامین/خرید') { unitResult.buyOrders++; unitResult.totalBuyVolume += parseFloat(tx.amount) || 0; unitResult.totalBuyPriceAmount += (parseFloat(tx.price) || 0) * (parseFloat(tx.amount) || 0); }
+                if (tx.type === 'فروش') { unitResult.sellOrders++; unitResult.totalSellVolume += parseFloat(tx.amount) || 0; unitResult.totalSellPriceAmount += (parseFloat(tx.price) || 0) * (parseFloat(tx.amount) || 0); }
+                unitResult.commissionReceived += parseFloat(tx.siteFee) || 0;
+                if (tx.type === 'فروش' && tx.saleRate && tx.supplyRate) { unitResult.tradingProfit += (parseFloat(tx.saleRate) - parseFloat(tx.supplyRate)) * (parseFloat(tx.amount) || 0); }
 
                 unitResult.totalIncome = unitResult.tradingProfit + unitResult.commissionReceived;
 
             } else { // Crypto and Products
-                 if (tx.type === 'تامین/خرید') { currencyResult.buyOrders++; currencyResult.totalBuyVolume += tx.amount; currencyResult.totalBuyPriceAmount += tx.price * tx.amount; }
-                 if (tx.type === 'فروش') { currencyResult.sellOrders++; currencyResult.totalSellVolume += tx.amount; currencyResult.totalSellPriceAmount += tx.price * tx.amount; }
-                 currencyResult.commissionReceived += tx.siteFee || 0;
-                 if (tx.type === 'فروش' && tx.saleRate && tx.supplyRate) { currencyResult.tradingProfit += (tx.saleRate - tx.supplyRate) * tx.amount; }
+                 if (tx.type === 'تامین/خرید') { currencyResult.buyOrders++; currencyResult.totalBuyVolume += parseFloat(tx.amount) || 0; currencyResult.totalBuyPriceAmount += (parseFloat(tx.price) || 0) * (parseFloat(tx.amount) || 0); }
+                 if (tx.type === 'فروش') { currencyResult.sellOrders++; currencyResult.totalSellVolume += parseFloat(tx.amount) || 0; currencyResult.totalSellPriceAmount += (parseFloat(tx.price) || 0) * (parseFloat(tx.amount) || 0); }
+                 currencyResult.commissionReceived += parseFloat(tx.siteFee) || 0;
+                 if (tx.type === 'فروش' && tx.saleRate && tx.supplyRate) { currencyResult.tradingProfit += (parseFloat(tx.saleRate) - parseFloat(tx.supplyRate)) * (parseFloat(tx.amount) || 0); }
                  currencyResult.totalIncome = currencyResult.tradingProfit + currencyResult.commissionReceived;
             }
         });
@@ -2346,7 +2342,7 @@ const AccessManagementPage = ({ roles, users, onSaveRole, onSaveUser, onDeleteUs
 
 // --- Main App Layout Component ---
 const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
-    const { data, onSave, onDelete, onSaveRole, onSaveUser, onDeleteUser, onUserRoleChange, onTransactionSubmit, onExchangeSubmit, showNotification } = props;
+    const { data, onSave, onDelete, onSaveRole, onSaveUser, onDeleteUser, onUserRoleChange, onTransactionSubmit, onExchangeSubmit, showNotification, isGapiReady } = props;
     const [activePage, setActivePage] = useState('dashboard');
     const [isSidebarOpen, setSidebarOpen] = useState(true);
     const [modalInfo, setModalInfo] = useState({ isOpen: false, title: '', data: null });
@@ -2423,6 +2419,7 @@ const MainAppLayout = ({ currentUser, handleLogout, ...props }) => {
                     showNotification={showNotification}
                     onShowDetails={handleShowDetails}
                     permissions={pagePermission}
+                    isGapiReady={isGapiReady}
                 />;
             case 'exchange':
                 return <ExchangePage items={data.items} onExchangeSubmit={onExchangeSubmit} showNotification={showNotification} permissions={pagePermission} />;
@@ -2682,6 +2679,7 @@ export default function App() {
     const [loginError, setLoginError] = useState('');
     const [loginLoading, setLoginLoading] = useState(false);
     const [notification, setNotification] = useState({ message: '', type: '', key: 0 });
+    const [isGapiReady, setIsGapiReady] = useState(false);
 
     const showNotification = (message, type) => {
         setNotification({ message, type, key: Date.now() });
@@ -2696,6 +2694,10 @@ export default function App() {
                 clientId: GOOGLE_CLIENT_ID,
                 discoveryDocs: DISCOVERY_DOCS,
                 scope: SCOPES,
+            }).then(() => {
+                setIsGapiReady(true);
+            }).catch(error => {
+                console.error("Error initializing gapi client:", error);
             });
         };
         
@@ -2790,8 +2792,13 @@ export default function App() {
         const unsubscribers = Object.entries(collectionsToListen).map(([stateKey, collectionName]) => {
             const q = query(collection(db, collectionName));
             return onSnapshot(q, (querySnapshot) => {
-                const isDoc = collectionName === 'settings';
-                if (isDoc) {
+                if (collectionName === 'transactions') {
+                    const allTransactions = [];
+                    querySnapshot.forEach((doc) => {
+                        allTransactions.push({ ...doc.data(), id: doc.id });
+                    });
+                    setData(prev => ({ ...prev, allTransactions: allTransactions }));
+                } else if (collectionName === 'settings') {
                     const settingsData = querySnapshot.docs[0] ? { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() } : {};
                      setData(prev => ({ ...prev, [stateKey]: settingsData }));
                 } else {
@@ -2865,12 +2872,12 @@ export default function App() {
             throw new Error(`Invalid delete type: ${type}`);
         }
 
-        if (type === 'item' && data.transactions[id] && data.transactions[id].length > 0) {
+        if (type === 'item' && data.allTransactions.some(tx => tx.itemId === id)) {
             throw new Error('این آیتم تراکنش دارد و قابل حذف نیست. می‌توانید آن را آرشیو کنید.');
         }
         if (type === 'wallet') {
             const walletName = data.wallets[id]?.name;
-            const isUsed = Object.values(data.transactions).flat().some(tx => tx.wallet === walletName);
+            const isUsed = data.allTransactions.some(tx => tx.wallet === walletName);
             if (isUsed) {
                 throw new Error('این کیف پول در تراکنش‌ها استفاده شده و قابل حذف نیست.');
             }
@@ -2951,11 +2958,15 @@ export default function App() {
             const itemToUpdate = itemDoc.data();
             const newTxRef = doc(collection(db, "transactions"));
 
-            const { type, amount, price, unit, siteFee, discount, issueFeeNik, issueFeeReal } = formData;
-            const numericAmount = parseFloat(amount) || 0;
-            const numericPrice = parseFloat(price) || 0;
-            const numericSiteFee = parseFloat(siteFee) || 0;
-            const numericDiscount = parseFloat(discount) || 0;
+            const numericAmount = parseFloat(formData.amount) || 0;
+            const numericPrice = parseFloat(formData.price) || 0;
+            const numericSiteFee = parseFloat(formData.siteFee) || 0;
+            const numericDiscount = parseFloat(formData.discount) || 0;
+            const numericNikFee = parseFloat(formData.nikFee) || 0;
+            const numericNetworkFee = parseFloat(formData.networkFee) || 0;
+            const numericIssueFeeNik = parseFloat(formData.issueFeeNik) || 0;
+            const numericIssueFeeReal = parseFloat(formData.issueFeeReal) || 0;
+            
             let profitOrLoss = 0;
 
             const newTransaction = {
@@ -2965,18 +2976,24 @@ export default function App() {
                 itemId: item.id,
                 amount: numericAmount,
                 price: numericPrice,
+                siteFee: numericSiteFee,
+                discount: numericDiscount,
+                nikFee: numericNikFee,
+                networkFee: numericNetworkFee,
+                issueFeeNik: numericIssueFeeNik,
+                issueFeeReal: numericIssueFeeReal,
             };
 
             if (item.type === 'محصول') {
-                if (type === 'فروش') {
+                if (formData.type === 'فروش') {
                     if (itemToUpdate.poolInventory < 1) throw new Error(`موجودی ${item.name} کافی نیست.`);
                     const supplyRateForOneUnit = itemToUpdate.avgRate || 0;
                     if (supplyRateForOneUnit === 0) throw new Error(`میانگین خرید برای ${item.name} صفر است.`);
 
-                    const numericIssueFeeNik = (parseFloat(issueFeeNik) || 0) * numericPrice;
-                    const numericIssueFeeReal = (parseFloat(issueFeeReal) || 0) * numericPrice;
+                    const issueFeeNikInToman = numericIssueFeeNik * numericPrice;
+                    const issueFeeRealInToman = numericIssueFeeReal * numericPrice;
 
-                    profitOrLoss = (numericPrice * numericAmount) - (supplyRateForOneUnit * numericAmount) + numericSiteFee - numericDiscount - numericIssueFeeNik - numericIssueFeeReal;
+                    profitOrLoss = (numericPrice * numericAmount) - (supplyRateForOneUnit * numericAmount) + numericSiteFee - numericDiscount - issueFeeNikInToman - issueFeeRealInToman;
                     
                     itemToUpdate.totalSells = (itemToUpdate.totalSells || 0) + 1;
                     itemToUpdate.poolInventory -= 1;
@@ -2994,11 +3011,11 @@ export default function App() {
                     newTransaction.supplyRate = finalSupplyRate;
                 }
             } else {
-                 if (type === 'فروش') {
+                 if (formData.type === 'فروش') {
                     let inventory, avgRate;
                     if(item.type === 'الکترونیک') {
-                        inventory = itemToUpdate.inventories?.[unit] || 0;
-                        avgRate = itemToUpdate.avgRates?.[unit] || 0;
+                        inventory = itemToUpdate.inventories?.[formData.unit] || 0;
+                        avgRate = itemToUpdate.avgRates?.[formData.unit] || 0;
                     } else {
                         inventory = itemToUpdate.poolInventory || 0;
                         avgRate = itemToUpdate.avgRate || 0;
@@ -3006,11 +3023,11 @@ export default function App() {
                     if (inventory < numericAmount) throw new Error(`موجودی ${item.name} کافی نیست.`);
                     if (avgRate === 0) throw new Error(`میانگین خرید برای ${item.name} صفر است.`);
                     
-                    const nikFeeInToman = (parseFloat(formData.nikFee) || 0) * numericPrice;
+                    const nikFeeInToman = numericNikFee * numericPrice;
                     profitOrLoss = (numericPrice - avgRate) * numericAmount + numericSiteFee - numericDiscount + nikFeeInToman;
                     itemToUpdate.totalSells = (itemToUpdate.totalSells || 0) + 1;
                     if(item.type === 'الکترونیک') {
-                        itemToUpdate.inventories[unit] -= numericAmount;
+                        itemToUpdate.inventories[formData.unit] -= numericAmount;
                     } else {
                         itemToUpdate.poolInventory -= numericAmount;
                     }
@@ -3021,11 +3038,11 @@ export default function App() {
                     profitOrLoss = numericSiteFee - numericDiscount;
                     itemToUpdate.totalBuys = (itemToUpdate.totalBuys || 0) + 1;
                     if(item.type === 'الکترونیک') {
-                        const oldInv = itemToUpdate.inventories?.[unit] || 0;
-                        const oldAvg = itemToUpdate.avgRates?.[unit] || 0;
+                        const oldInv = itemToUpdate.inventories?.[formData.unit] || 0;
+                        const oldAvg = itemToUpdate.avgRates?.[formData.unit] || 0;
                         const newInv = oldInv + numericAmount;
-                        itemToUpdate.avgRates[unit] = newInv > 0 ? ((oldInv * oldAvg) + (numericAmount * finalSupplyRate)) / newInv : finalSupplyRate;
-                        itemToUpdate.inventories[unit] = newInv;
+                        itemToUpdate.avgRates[formData.unit] = newInv > 0 ? ((oldInv * oldAvg) + (numericAmount * finalSupplyRate)) / newInv : finalSupplyRate;
+                        itemToUpdate.inventories[formData.unit] = newInv;
                     } else {
                         const oldInv = itemToUpdate.poolInventory || 0;
                         const oldAvg = itemToUpdate.avgRate || 0;
@@ -3051,8 +3068,22 @@ export default function App() {
         console.log("Exchange logic needs to be implemented with Firestore transactions.", formData);
     };
 
+    const groupedTransactions = useMemo(() => {
+        if (!data?.allTransactions) return {};
+        const grouped = {};
+        data.allTransactions.forEach(tx => {
+            if (tx.itemId) {
+                if (!grouped[tx.itemId]) {
+                    grouped[tx.itemId] = [];
+                }
+                grouped[tx.itemId].push(tx);
+            }
+        });
+        return grouped;
+    }, [data?.allTransactions]);
 
-    if (authLoading || (currentUser && (!data || !data.roles || !data.users || !data.items || !data.wallets || !data.sources || !data.settings || !data.transactions))) {
+
+    if (authLoading || (currentUser && (!data || !data.roles || !data.users || !data.items || !data.wallets || !data.sources || !data.settings || !data.allTransactions))) {
         return (
             <div className="min-h-screen w-screen bg-gray-900 text-slate-300 flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
@@ -3074,7 +3105,8 @@ export default function App() {
         sources: Object.values(data.sources || {}),
         users: Object.values(data.users || {}).map(u => ({...u, id: u.uid})),
         settings: data.settings || {},
-        transactions: data.transactions || {},
+        transactions: groupedTransactions,
+        allTransactions: data.allTransactions || [],
         roles: data.roles || {},
     };
 
@@ -3099,6 +3131,7 @@ export default function App() {
                 onUserRoleChange={handleUserRoleChange}
                 onTransactionSubmit={handleTransactionSubmit}
                 onExchangeSubmit={handleExchangeSubmit}
+                isGapiReady={isGapiReady}
             />
         </>
     );
