@@ -41,13 +41,6 @@ const firebaseConfig = {
     appId: "1:420331427979:web:c03c2ceaa8eae992a61c8e"
 };
 // ====================================================================================
-// =========================== GOOGLE API CONFIGURATION ===============================
-// ====================================================================================
-const GOOGLE_API_KEY = "AIzaSyBtvPsfnNLCXEGDToRArSwIr-qfa63GuLY"; // FIXED: Using the correct API key from Firebase config
-const GOOGLE_CLIENT_ID = "522998435883-uojc6gmpo0k79d0s7se0iu2bumh6l796.apps.googleusercontent.com"; 
-const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
-const SCOPES = "https://www.googleapis.com/auth/spreadsheets.readonly";
-// ====================================================================================
 
 
 // Initialize Firebase
@@ -694,7 +687,7 @@ const FullTransactionsTable = ({ transactions, showCurrencyName = false, onShowD
     </div>
 );
 
-const TransactionForm = ({ onTransactionSubmit, showNotification, settings, customerBalances, wallets, items, permissions, isGapiReady }) => {
+const TransactionForm = ({ onTransactionSubmit, showNotification, settings, customerBalances, wallets, items, permissions }) => {
     const initialFormState = {
         type: 'فروش',
         itemName: '',
@@ -791,51 +784,7 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
             setIsLoading(false);
         }
     };
-
-    const handleImportFromSheet = async () => {
-        try {
-            if (!window.gapi || !window.gapi.auth2 || !window.gapi.client) {
-                showNotification('Google API هنوز بارگذاری نشده است. لطفا چند لحظه صبر کرده و دوباره تلاش کنید.', 'error');
-                return;
-            }
     
-            const authInstance = window.gapi.auth2.getAuthInstance();
-            if (!authInstance.isSignedIn.get()) {
-                await authInstance.signIn();
-            }
-    
-            const SPREADSHEET_ID = '16tcx7eRuVLgK3sEnIzTB-FLsnoMrIInDnEGCnJbMmso';
-            const RANGE = 'sheet1!B2:G2'; // Corrected range to match your sheet
-    
-            const response = await window.gapi.client.sheets.spreadsheets.values.get({
-                spreadsheetId: SPREADSHEET_ID,
-                range: RANGE,
-            });
-    
-            const values = response.result.values;
-            if (values && values.length > 0) {
-                const row = values[0];
-                // Corrected mapping based on your sheet screenshot
-                const importedData = {
-                    itemName: row[0] || '',
-                    type: row[1] || 'فروش', // Assuming column C is transaction type
-                    amount: row[2] || '',
-                    price: row[3] || '',
-                    wallet: row[4] || '',
-                    customerId: row[5] || '',
-                };
-                setForm(prevForm => ({ ...prevForm, ...importedData }));
-                showNotification('اطلاعات از شیت با موفقیت بارگذاری شد.', 'success');
-            } else {
-                showNotification('هیچ داده‌ای در محدوده مشخص شده یافت نشد.', 'error');
-            }
-        } catch (err) {
-            console.error("Full error object during Google Sheet import:", JSON.stringify(err, null, 2));
-            const errorMessage = err.result?.error?.message || err.details || 'خطا در احراز هویت یا خواندن اطلاعات.';
-            showNotification(errorMessage, 'error');
-        }
-    };
-
     const isSale = form.type === 'فروش';
     const isProduct = form.itemType === 'محصول';
 
@@ -963,17 +912,7 @@ const TransactionForm = ({ onTransactionSubmit, showNotification, settings, cust
                 </>
             )}
 
-            <div className="flex justify-between items-center pt-4 border-t border-slate-700">
-                <StyledButton
-                    type="button"
-                    onClick={handleImportFromSheet}
-                    variant="secondary"
-                    disabled={!canEdit || !isGapiReady}
-                    title={!isGapiReady ? "در حال اتصال به سرویس گوگل..." : ""}
-                >
-                    <Sheet size={16} />
-                    {isGapiReady ? "وارد کردن از گوگل شیت" : "در حال اتصال..."}
-                </StyledButton>
+            <div className="flex justify-end pt-4 border-t border-slate-700">
                 <StyledButton type="submit" variant="primary" disabled={!canEdit || isLoading} isLoading={isLoading}>
                     ثبت تراکنش
                 </StyledButton>
