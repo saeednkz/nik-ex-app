@@ -43,7 +43,7 @@ const firebaseConfig = {
 // ====================================================================================
 // =========================== GOOGLE API CONFIGURATION ===============================
 // ====================================================================================
-const GOOGLE_API_KEY = "AIzaSyDe2ZgPy488Ha2wMFnvHM9upHXxZXHL43E"; 
+const GOOGLE_API_KEY = "AIzaSyBtvPsfnNLCXEGDToRArSwIr-qfa63GuLY"; // FIXED: Using the correct API key from Firebase config
 const GOOGLE_CLIENT_ID = "522998435883-uojc6gmpo0k79d0s7se0iu2bumh6l796.apps.googleusercontent.com"; 
 const DISCOVERY_DOCS = ["https://sheets.googleapis.com/$discovery/rest?version=v4"];
 const SCOPES = "https://www.googleapis.com/auth/spreadsheets.readonly";
